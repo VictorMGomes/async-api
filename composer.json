@@ -1,0 +1,29 @@
+{
+  "name": "victormgomes/async-api",
+  "description": "Automated AsyncAPI documentation for the WebSocket API",
+  "version": "0.0.1",
+  "keywords": [
+    "laravel",
+    "documentation",
+    "asyncapi",
+    "ws",
+    "websockets"
+  ],
+  "homepage": "https://github.com/victormgomes/async-api",
+  "license": "MIT",
+  "type": "library",
+  "authors": [
+    {
+      "name": "Victor M. Gomes",
+      "email": "info@victormgomes.net"
+    }
+  ],
+  "require": {},
+  "autoload": {
+    "psr-4": {
+      "Victormgomes\\AsyncApi\\": "src/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
