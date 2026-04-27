@@ -8,6 +8,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Support\Facades\Log;
 use ReflectionClass;
 use ReflectionNamedType;
+use Spatie\LaravelData\Data;
 use stdClass;
 use Symfony\Component\Finder\Finder;
 use Throwable;
@@ -106,7 +107,7 @@ class AsyncApiGenerator
                                 break;
                             }
 
-                            if (is_subclass_of($typeName, \Spatie\LaravelData\Data::class)) {
+                            if (is_subclass_of($typeName, Data::class)) {
                                 $potentialPayloads[] = $typeName;
 
                                 continue;
