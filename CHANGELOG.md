@@ -1,3 +1,7 @@
 # Changelog
 
 All notable changes to `async-api` will be documented in this file.
+
+## v0.0.2 - 2026-04-27
+
+**Full Changelog**: https://github.com/VictorMGomes/async-api/compare/v0.0.1...v0.0.2
