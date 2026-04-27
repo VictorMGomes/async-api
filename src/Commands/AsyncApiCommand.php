@@ -8,13 +8,13 @@ use Illuminate\Console\Command;
 use Victormgomes\AsyncApi\Services\Docs\AsyncApiGenerator;
 use Victormgomes\AsyncApi\Services\Docs\SchemaConverter;
 
-class GenerateAsyncApiDocs extends Command
+class AsyncApiCommand extends Command
 {
     protected $signature = 'docs:asyncapi';
 
     protected $description = 'Gera a documentação AsyncAPI automaticamente.';
 
-    public function handle()
+    public function handle(): int
     {
         $this->info('🚀 Iniciando escaneamento de eventos...');
 
@@ -33,5 +33,7 @@ class GenerateAsyncApiDocs extends Command
 
         $this->info('✅ Arquivo gerado com sucesso!');
         $this->info('📂 '.$path);
+
+        return self::SUCCESS;
     }
 }
