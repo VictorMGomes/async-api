@@ -1,7 +1,7 @@
 {
   "name": "victormgomes/async-api",
-  "description": "Automated AsyncAPI documentation for the WebSocket API",
-  "version": "0.0.2",
+  "description": "Automatically generate documentation for the AsyncAPI specification based on Laravel events",
+  "version": "0.0.3",
   "keywords": [
     "Victor M. Gomes",
     "laravel",
@@ -9,6 +9,16 @@
   ],
   "homepage": "https://github.com/victormgomes/async-api",
   "license": "MIT",
+  "support": {
+    "issues": "https://github.com/victormgomes/async-api/issues",
+    "source": "https://github.com/victormgomes/async-api"
+  },
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/VictorMGomes"
+    }
+  ],
   "authors": [
     {
       "name": "Victor M. Gomes",

@@ -1,19 +1,33 @@
-# Automated AsyncAPI documentation for the WebSocket API
+# Async API
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/victormgomes/async-api.svg?style=flat-square)](https://packagist.org/packages/victormgomes/async-api)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/victormgomes/async-api/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/victormgomes/async-api/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/victormgomes/async-api/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/victormgomes/async-api/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/victormgomes/async-api.svg?style=flat-square)](https://packagist.org/packages/victormgomes/async-api)
+[![License](https://img.shields.io/packagist/l/victormgomes/async-api.svg?style=flat-square)](https://packagist.org/packages/victormgomes/async-api)
 
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+**Automatically generate documentation for the AsyncAPI specification based on Laravel events**
+
+---
+
+## Introduction
+
+In modern event-driven architectures, documenting WebSocket interfaces is as crucial as documenting REST APIs. **Async-API** bridges this gap for Laravel applications by automating the generation of AsyncAPI specifications.
+
+### Why use this package?
+
+*   **Zero-Effort Documentation**: Stop maintaining manual AsyncAPI files. Document your events directly in your PHP code.
+*   **Attribute-Based**: Uses modern PHP 8 attributes for a clean and declarative developer experience.
+*   **Schema Integration**: Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
+*   **Seamless Integration**: Works perfectly with Laravel's broadcasting system.
+
+---
 
 ## Support us
 
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/async-api.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/async-api)
+We invest a lot of resources into creating [best in class open source packages](https://github.com/victormgomes). You can support us by [sponsoring us on GitHub](https://github.com/sponsors/VictorMGomes).
 
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+---
 
 ## Installation
 
@@ -23,38 +37,31 @@ You can install the package via composer:
 composer require victormgomes/async-api
 ```
 
-You can publish and run the migrations with:
-
-```bash
-php artisan vendor:publish --tag="async-api-migrations"
-php artisan migrate
-```
-
 You can publish the config file with:
 
 ```bash
 php artisan vendor:publish --tag="async-api-config"
 ```
 
-This is the contents of the published config file:
-
-```php
-return [
-];
-```
-
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="async-api-views"
-```
+---
 
 ## Usage
 
+Simply add the `#[AsyncApi]` attribute to your event classes. You can specify a DTO class to automatically generate the schema for the message payload.
+
 ```php
-$asyncApi = new Victormgomes\AsyncApi();
-echo $asyncApi->echoPhrase('Hello, Victormgomes!');
+use Victormgomes\AsyncApi\Attributes\AsyncApi;
+
+#[AsyncApi(dto: ChatPresenceDTO::class)]
+class ChatPresence implements ShouldBroadcast
+{
+    // ...
+}
 ```
+
+The package will then discover these attributes and compile them into a standardized AsyncAPI specification.
+
+---
 
 ## Testing
 
