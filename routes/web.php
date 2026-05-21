@@ -2,16 +2,19 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Route;
 use Victormgomes\AsyncApi\Services\Docs\AsyncApiGenerator;
 
-Route::get('/docs/ws', function () {
-    return view('async-api::asyncapi');
-})->name('docs.ws.ui');
+Route::middleware(config('async-api.middleware', []))->group(function () {
+    Route::get('/docs/ws', function () {
+        return view('async-api::asyncapi');
+    })->name('docs.ws.ui');
 
-Route::get('/docs/ws/json', function (AsyncApiGenerator $generator) {
-    ob_start();
-    $schema = $generator->generate();
-    ob_end_clean();
+    Route::get('/docs/ws/json', function (AsyncApiGenerator $generator) {
+        ob_start();
+        $schema = $generator->generate();
+        ob_end_clean();
 
-    return response()->json($schema);
-})->name('docs.ws.json');
+        return response()->json($schema);
+    })->name('docs.ws.json');
+});
