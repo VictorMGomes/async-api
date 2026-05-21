@@ -320,6 +320,8 @@ class AsyncApiGenerator
 
     private function log(string $message): void
     {
-        Log::info("[AsyncApi] $message");
+        if (config('async-api.debug', true)) {
+            Log::info("[AsyncApi] $message");
+        }
     }
 }
