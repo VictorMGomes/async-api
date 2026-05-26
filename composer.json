@@ -1,7 +1,7 @@
 {
   "name": "victormgomes/async-api",
   "description": "Automatically generate documentation for the AsyncAPI specification based on Laravel events",
-  "version": "0.0.5",
+  "version": "1.0.0",
   "keywords": [
     "Victor M. Gomes",
     "laravel",
