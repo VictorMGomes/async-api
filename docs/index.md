@@ -3,8 +3,8 @@ layout: home
 
 hero:
     name: Laravel Async API
-    text: AsyncAPI documentation from Laravel events.
-    tagline: Automatically generate AsyncAPI 3.0 specifications from your Laravel broadcast events.
+    text: AsyncAPI documentation for Laravel Broadcasting.
+    tagline: Automatically generate AsyncAPI 3.0 specifications from your Laravel broadcasting implementations.
     actions:
         - theme: brand
           text: Get Started
@@ -19,8 +19,6 @@ hero:
 features:
     - title: Zero-Effort Documentation
       details: Stop maintaining manual AsyncAPI files. Document your events automatically using static code analysis.
-    - title: 🧩 Attribute-Based
-      details: Uses modern PHP 8 attributes for a clean and declarative developer experience. No verbose XML or YAML.
     - title: 🔗 Schema Integration
       details: Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
 ---

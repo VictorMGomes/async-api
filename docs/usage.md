@@ -27,9 +27,9 @@ class UserRegistered implements ShouldBroadcast
 
 The example above automatically generates a full OpenAPI/AsyncAPI JSON Schema with `name` (string), `age` (integer), and `permissions` (an object mapping to the `Permission` DTO properties).
 
-## The `#[AsyncApi]` Attribute (Optional overrides)
+## Advanced Usage: Customizing with Attributes
 
-If you need to manually override the generated schema, add the `#[AsyncApi]` attribute to your event class:
+While the package automatically discovers and documents your events, you might want to manually override the generated schema. To do this, add the `#[AsyncApi]` attribute to your event class:
 
 ```php
 use Victormgomes\AsyncApi\Attributes\AsyncApi;

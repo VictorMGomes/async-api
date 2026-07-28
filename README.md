@@ -1,7 +1,7 @@
 # Laravel Async API
 
-Automatically generates AsyncAPI 3.0 documentation from your Laravel broadcast
-events using PHP attributes.
+Automatically generates AsyncAPI 3.0 documentation from your Laravel broadcasting
+implementations.
 
 ## Package Status
 
@@ -29,7 +29,6 @@ specifications with zero manual effort.
 ## Features
 
 - **Zero-Effort Documentation:** Stop maintaining manual AsyncAPI files. Document your events directly in your PHP code.
-- **Attribute-Based:** Uses modern PHP 8 attributes for a clean and declarative developer experience.
 - **Schema Integration:** Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
 - **Seamless Integration:** Works perfectly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
 - **AsyncAPI 3.0 Compliant:** Generates specifications that follow the latest AsyncAPI standard.

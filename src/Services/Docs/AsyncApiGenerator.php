@@ -26,21 +26,59 @@ class AsyncApiGenerator
     {
         $this->log('🚀 INICIANDO GERAÇÃO (GLOBAL CONFIG MODE)...');
 
-        $info = config('asyncapi.info', []);
+        $info = [
+            'title' => config('async-api.info_title', config('app.name').' Broadcasting API'),
+            'version' => config('async-api.info_version', '1.0.0'),
+            'description' => config('async-api.info_description', 'AsyncAPI documentation for the broadcasting API'),
+        ];
 
-        $info['title'] = $info['title'] ?? config('app.name').' Broadcasting API';
-        $info['version'] = $info['version'] ?? '1.0.0';
+        $protocol = config('async-api.server_scheme', 'https') === 'https' ? 'wss' : 'ws';
+        $host = config('async-api.server_host', 'localhost') . ':' . config('async-api.server_port', 8080);
+        
+        $servers = [
+            'default' => [
+                'host' => $host,
+                'protocol' => $protocol,
+                'protocolVersion' => '1.3',
+                'description' => config('async-api.server_description', 'Laravel Reverb Server (Pusher Protocol)'),
+                'security' => [
+                    ['$ref' => '#/components/securitySchemes/bearerAuth'],
+                ],
+                'bindings' => [
+                    'ws' => [
+                        'method' => 'GET',
+                        'query' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'appKey' => [
+                                    'type' => 'string',
+                                    'description' => 'The Reverb/Pusher App Key',
+                                    'example' => config('async-api.server_app_key', 'your-app-key-here'),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]
+        ];
 
         $structure = [
-            'asyncapi' => config('asyncapi.asyncapi_version', '3.0.0'),
+            'asyncapi' => config('async-api.asyncapi_version', '3.0.0'),
             'info' => array_filter($info),
-            'defaultContentType' => config('asyncapi.default_content_type', 'application/json'),
-            'servers' => config('asyncapi.servers', []),
+            'defaultContentType' => config('async-api.default_content_type', 'application/json'),
+            'servers' => $servers,
             'channels' => [],
             'operations' => [],
             'components' => [
                 'schemas' => [],
-                'securitySchemes' => config('asyncapi.components.securitySchemes', []),
+                'securitySchemes' => [
+                    'bearerAuth' => [
+                        'type' => 'http',
+                        'scheme' => 'bearer',
+                        'bearerFormat' => 'JWT',
+                        'description' => config('async-api.security_description', 'Enter your Sanctum token to authenticate with the broadcasting server.'),
+                    ]
+                ],
             ],
         ];
 
