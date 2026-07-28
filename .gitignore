@@ -4,10 +4,13 @@ composer.lock
 
 # Frontend Assets
 /node_modules
+package-lock.json
 
 # Logs
 npm-debug.log
 yarn-error.log
+logs/*
+!logs/.gitkeep
 
 # Caches
 .phpunit.cache
@@ -24,9 +27,15 @@ _ide_helper_models.php
 /.fleet
 /.vscode
 
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache
+
 # Misc
 phpunit.xml
 phpstan.neon
 testbench.yaml
-/docs
 /coverage
+.env
+.env.backup
+.DS_Store
