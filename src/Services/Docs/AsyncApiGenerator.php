@@ -55,7 +55,7 @@ class AsyncApiGenerator
         
         $validClassesCount = 0;
 
-        $ranger->onBroadcastEvents(function (\Laravel\Ranger\Components\BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount) {
+        $ranger->onBroadcastEvent(function (\Laravel\Ranger\Components\BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount) {
             $this->log("💎 EVENTO BROADCAST ENCONTRADO (Ranger): {$event->className}");
             $processed = $this->processEvent($event, $analyzer, $structure);
             if ($processed) {
@@ -228,7 +228,6 @@ class AsyncApiGenerator
     {
         if ($type instanceof ClassType) {
             $prop = new \ReflectionProperty(ClassType::class, 'constructorArguments');
-            $prop->setAccessible(true);
             $args = $prop->getValue($type);
             
             if (is_array($args) && count($args) > 0 && $args[0] instanceof StringType) {
