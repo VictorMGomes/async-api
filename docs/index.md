@@ -20,8 +20,11 @@ features:
     - title: Zero-Effort Documentation
       details: Stop maintaining manual AsyncAPI files. Document your events automatically using static code analysis.
     - title: 🔗 Schema Integration
-      details: Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
+      details: The broadcasting implementation structure, including data types, is inferred automatically to ensure your documentation always matches your code.
 ---
+
+<!-- markdownlint-disable MD033 MD041 -->
+<br>
 
 # 🚀 Quick Start
 
