@@ -1,43 +1,59 @@
-# Async API
+# Laravel Async API
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/victormgomes/async-api.svg?style=flat-square)](https://packagist.org/packages/victormgomes/async-api)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/victormgomes/async-api/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/victormgomes/async-api/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/victormgomes/async-api/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/victormgomes/async-api/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/victormgomes/async-api/ci.yml?branch=main&label=tests&style=flat-square)](https://github.com/victormgomes/async-api/actions?query=workflow%3Atests+branch%3Amain)
+[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/victormgomes/async-api/ci.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/victormgomes/async-api/actions?query=workflow%3Astyle-check+branch%3Amain)
+[![GitHub Code Quality Action Status](https://img.shields.io/github/actions/workflow/status/victormgomes/async-api/ci.yml?branch=main&label=code%20quality&style=flat-square)](https://github.com/victormgomes/async-api/actions?query=workflow%3Acode-quality+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/victormgomes/async-api.svg?style=flat-square)](https://packagist.org/packages/victormgomes/async-api)
 [![License](https://img.shields.io/packagist/l/victormgomes/async-api.svg?style=flat-square)](https://packagist.org/packages/victormgomes/async-api)
 
-**Automatically generate documentation for the AsyncAPI specification based on Laravel events**
+**Automatically generate AsyncAPI 3.0 documentation from your Laravel broadcast events using PHP attributes.**
 
 ---
 
-## Introduction
+## Why use this package?
 
-In modern event-driven architectures, documenting WebSocket interfaces is as crucial as documenting REST APIs. **Async-API** bridges this gap for Laravel applications by automating the generation of AsyncAPI specifications.
+In modern event-driven architectures, documenting WebSocket interfaces is as crucial as documenting REST APIs. **Laravel Async API** bridges this gap for Laravel applications by automating the generation of AsyncAPI specifications.
 
-### Why use this package?
-
-*   **Zero-Effort Documentation**: Stop maintaining manual AsyncAPI files. Document your events directly in your PHP code.
-*   **Attribute-Based**: Uses modern PHP 8 attributes for a clean and declarative developer experience.
-*   **Schema Integration**: Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
-*   **Seamless Integration**: Works perfectly with Laravel's broadcasting system.
+- **Zero-Effort Documentation**: Stop maintaining manual AsyncAPI files. Document your events directly in your PHP code.
+- **Attribute-Based**: Uses modern PHP 8 attributes for a clean and declarative developer experience.
+- **Schema Integration**: Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
+- **Seamless Integration**: Works perfectly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
+- **AsyncAPI 3.0 Compliant**: Generates specifications that follow the latest AsyncAPI standard.
 
 ---
 
-## Support us
+## How It Works
 
-We invest a lot of resources into creating [best in class open source packages](https://github.com/victormgomes). You can support us by [sponsoring us on GitHub](https://github.com/sponsors/VictorMGomes).
+Add the `#[AsyncApi]` attribute to your broadcast event classes, optionally specifying a DTO for automatic schema extraction:
+
+```php
+use Victormgomes\AsyncApi\Attributes\AsyncApi;
+
+#[AsyncApi(dto: ChatMessageDTO::class, channel: 'chat.{room}')]
+class ChatMessage implements ShouldBroadcast
+{
+    // ...
+}
+```
+
+Run the artisan command to generate the specification:
+
+```bash
+php artisan docs:asyncapi
+```
+
+The package discovers all `#[AsyncApi]`-attributed events, extracts their schemas, and compiles them into a fully compliant AsyncAPI 3.0 JSON specification at `public/docs/asyncapi.json`.
 
 ---
 
 ## Installation
 
-You can install the package via composer:
-
 ```bash
 composer require victormgomes/async-api
 ```
 
-You can publish the config file with:
+Publish the configuration file:
 
 ```bash
 php artisan vendor:publish --tag="async-api-config"
@@ -45,21 +61,49 @@ php artisan vendor:publish --tag="async-api-config"
 
 ---
 
-## Usage
+## Quick Start
 
-Simply add the `#[AsyncApi]` attribute to your event classes. You can specify a DTO class to automatically generate the schema for the message payload.
+### Step 1: Annotate Your Event
 
 ```php
 use Victormgomes\AsyncApi\Attributes\AsyncApi;
 
-#[AsyncApi(dto: ChatPresenceDTO::class)]
-class ChatPresence implements ShouldBroadcast
+#[AsyncApi(
+    channel: 'chat.{room}',
+    dto: \App\DTOs\ChatMessageDTO::class,
+    description: 'A new chat message in a room',
+    action: 'send',
+)]
+class ChatMessage implements ShouldBroadcast
 {
-    // ...
+    public function __construct(
+        public string $room,
+        public string $message,
+        public string $sender,
+    ) {}
+
+    public function broadcastOn(): array
+    {
+        return [new Channel('chat.'.$this->room)];
+    }
 }
 ```
 
-The package will then discover these attributes and compile them into a standardized AsyncAPI specification.
+### Step 2: Generate the Specification
+
+```bash
+php artisan docs:asyncapi
+```
+
+### Step 3: Use It
+
+Import `public/docs/asyncapi.json` into [AsyncAPI Studio](https://studio.asyncapi.com/), [Redocly](https://redocly.com/), or any AsyncAPI-compatible tool.
+
+---
+
+## Documentation
+
+For full documentation, visit **[laravel-async-api.victormgomes.net](https://laravel-async-api.victormgomes.net/)**.
 
 ---
 
@@ -68,6 +112,8 @@ The package will then discover these attributes and compile them into a standard
 ```bash
 composer test
 ```
+
+---
 
 ## Changelog
 

@@ -6,7 +6,7 @@
         "excludes": [
             "Commands",
             "Facades",
-            "LaravelQueryEngineServiceProvider.php"
+            "AsyncApiServiceProvider.php"
         ]
     },
     "logs": {

@@ -7,8 +7,5 @@ parameters:
     ignoreErrors:
         -
             message: "#^Called 'env' outside of the config directory#"
-            path: config/query-engine.php
-        -
-            message: "#^Trait .*\\\\HasQueryEngineRules is used zero times and is not analysed\\.$#"
-            path: src/Traits/HasQueryEngineRules.php
+            path: config/async-api.php
     tmpDir: build/phpstan
