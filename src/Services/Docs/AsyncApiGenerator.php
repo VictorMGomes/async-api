@@ -129,7 +129,8 @@ class AsyncApiGenerator
                 return '{'.$m[1].'}';
             }, $channelUri);
 
-            $eventName = $attr->name ?? $this->safelyGetBroadcastAs($reflection);
+            // Usa o nome da mensagem extraído nativamente pelo Surveyor/Ranger via $event->name
+            $eventName = $attr->name ?? $event->name;
 
             // Delega a geração do schema inteiramente ao Surveyor Type
             $payloadSchema = $this->schemaConverter->convertSurveyorType($event->data);
@@ -249,18 +250,6 @@ class AsyncApiGenerator
         }
         
         return null;
-    }
-
-    private function safelyGetBroadcastAs(ReflectionClass $reflection): string
-    {
-        try {
-            if ($reflection->hasMethod('broadcastAs')) {
-                return $reflection->newInstanceWithoutConstructor()->broadcastAs();
-            }
-        } catch (Throwable $e) {
-        }
-
-        return $reflection->getShortName();
     }
 
     private function log(string $message): void

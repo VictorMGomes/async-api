@@ -6,9 +6,7 @@ namespace Victormgomes\AsyncApi\Services\Docs;
 
 use ReflectionClass;
 use ReflectionEnum;
-use ReflectionNamedType;
-use ReflectionProperty;
-use Spatie\LaravelData\Data;
+use Laravel\Surveyor\Analyzer\Analyzer;
 use Laravel\Surveyor\Types\Contracts\Type as SurveyorType;
 use Laravel\Surveyor\Types\ClassType;
 use Laravel\Surveyor\Types\ArrayType;
@@ -30,6 +28,25 @@ class SchemaConverter
     public function convertSurveyorType(SurveyorType $type): array
     {
         if ($type instanceof ClassType) {
+            if (enum_exists($type->value)) {
+                $enumReflection = new ReflectionEnum($type->value);
+
+                if ($enumReflection->isBacked()) {
+                    $backingType = $enumReflection->getBackingType();
+                    $backingTypeName = $backingType?->getName() ?? 'string';
+                    
+                    return [
+                        'type' => $backingTypeName === 'int' ? 'integer' : 'string',
+                        'enum' => array_map(fn ($case) => $case->value, $type->value::cases()),
+                    ];
+                }
+
+                return [
+                    'type' => 'string',
+                    'enum' => array_map(fn ($case) => $case->name, $type->value::cases()),
+                ];
+            }
+
             return $this->convert($type->value, true);
         }
 
@@ -114,12 +131,15 @@ class SchemaConverter
 
     private function extractProperties(string $className): array
     {
-        $reflection = new ReflectionClass($className);
+        // Agora usamos o Analyzer do Surveyor para extrair as propriedades em vez do Reflection nativo
+        $analyzer = app(Analyzer::class);
+        $analyzed = $analyzer->analyzeClass($className)->result();
+        
         $properties = [];
 
-        foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $prop) {
-            $propName = $prop->getName();
-            $properties[$propName] = $this->resolveType($prop);
+        foreach ($analyzed->publicProperties() as $prop) {
+            $propName = $prop->name;
+            $properties[$propName] = $this->convertSurveyorType($prop->type);
         }
 
         return [
@@ -131,72 +151,5 @@ class SchemaConverter
     public function getSchemas(): array
     {
         return $this->schemas;
-    }
-
-    private function resolveType(ReflectionProperty $prop): array
-    {
-        $type = $prop->getType();
-
-        if (! $type instanceof ReflectionNamedType) {
-            return ['type' => 'string'];
-        }
-
-        $typeName = $type->getName();
-        $isNullable = $type->allowsNull();
-        $schema = [];
-
-        if (enum_exists($typeName)) {
-            $enumReflection = new ReflectionEnum($typeName);
-
-            if ($enumReflection->isBacked()) {
-                $backingType = $enumReflection->getBackingType();
-                $backingTypeName = $backingType?->getName() ?? 'string';
-                /** @var \BackedEnum[] $cases */
-                $cases = $typeName::cases();
-
-                $schema = [
-                    'type' => $backingTypeName === 'int' ? 'integer' : 'string',
-                    'enum' => array_map(fn ($case) => $case->value, $cases),
-                ];
-            } else {
-                $schema = [
-                    'type' => 'string',
-                    'enum' => array_map(fn ($case) => $case->name, $typeName::cases()),
-                ];
-            }
-        } elseif (is_subclass_of($typeName, Data::class) || (class_exists($typeName) && ! (new ReflectionClass($typeName))->isInternal())) {
-            // Se for uma classe não interna, converte como referência direta (sem o wrapping extra)
-            $schema = $this->convert($typeName, true);
-        } else {
-            $schema['type'] = match ($typeName) {
-                'int' => 'integer',
-                'float' => 'number',
-                'bool' => 'boolean',
-                'array' => 'array',
-                default => 'string',
-            };
-        }
-
-        if ($isNullable) {
-            $currentType = $schema['type'] ?? 'string';
-
-            if (isset($schema['$ref'])) {
-                return [
-                    'oneOf' => [
-                        $schema,
-                        ['type' => 'null'],
-                    ],
-                ];
-            }
-
-            return [
-                'oneOf' => [
-                    $schema,
-                    ['type' => 'null'],
-                ],
-            ];
-        }
-
-        return $schema;
     }
 }
