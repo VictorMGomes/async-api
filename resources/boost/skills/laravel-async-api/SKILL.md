@@ -51,17 +51,17 @@ The file is written to `public/docs/asyncapi.json`.
 
 ## `#[AsyncApi]` Attribute Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `channel` | `?string` | `null` | Broadcast channel URI (supports `{param}` placeholders). |
-| `dto` | `?string` | `null` | DTO/Model class for payload schema extraction. |
-| `description` | `string` | `''` | Human-readable operation description. |
-| `name` | `?string` | `null` | Custom event name (defaults to class name or `broadcastAs()`). |
-| `summary` | `?string` | `null` | Short summary (AsyncAPI 3.0). |
-| `operationId` | `?string` | `null` | Unique operation identifier. |
-| `action` | `string` | `'send'` | `'send'` or `'receive'`. |
-| `tags` | `array` | `[]` | Tags for grouping operations. |
-| `security` | `?array` | `null` | Per-operation security overrides. |
+| Parameter     | Type      | Default  | Description                                                    |
+| ------------- | --------- | -------- | -------------------------------------------------------------- |
+| `channel`     | `?string` | `null`   | Broadcast channel URI (supports `{param}` placeholders).       |
+| `dto`         | `?string` | `null`   | DTO/Model class for payload schema extraction.                 |
+| `description` | `string`  | `''`     | Human-readable operation description.                          |
+| `name`        | `?string` | `null`   | Custom event name (defaults to class name or `broadcastAs()`). |
+| `summary`     | `?string` | `null`   | Short summary (AsyncAPI 3.0).                                  |
+| `operationId` | `?string` | `null`   | Unique operation identifier.                                   |
+| `action`      | `string`  | `'send'` | `'send'` or `'receive'`.                                       |
+| `tags`        | `array`   | `[]`     | Tags for grouping operations.                                  |
+| `security`    | `?array`  | `null`   | Per-operation security overrides.                              |
 
 ## DTO Schema Extraction
 

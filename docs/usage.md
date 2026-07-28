@@ -18,21 +18,21 @@ With no parameters, the package will infer the channel name from the event's `br
 
 ## Attribute Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `channel` | `?string` | `null` | The broadcast channel URI. Supports dynamic parameters like `chat.{room}`. |
-| `dto` | `?string` | `null` | Fully qualified class name of a DTO/Model to extract the payload schema from. |
-| `description` | `string` | `''` | Human-readable description of the operation. |
-| `name` | `?string` | `null` | Custom name for the event. Defaults to the class short name or `broadcastAs()`. |
-| `summary` | `?string` | `null` | Short summary of the operation (AsyncAPI 3.0). |
-| `operationId` | `?string` | `null` | Unique identifier for the operation. Defaults to `{action}{eventName}`. |
-| `action` | `string` | `'send'` | The operation action: `'send'` or `'receive'`. |
-| `tags` | `array` | `[]` | Tags for grouping operations in the specification. |
-| `examples` | `array` | `[]` | Example payloads for the message. |
-| `bindings` | `array` | `[]` | Protocol-specific bindings (e.g., WebSocket configuration). |
-| `externalDocs` | `?array` | `null` | External documentation link. |
-| `correlationId` | `?string` | `null` | Correlation ID location for message tracing. |
-| `security` | `?array` | `null` | Custom security schemes for this specific operation. |
+| Parameter       | Type      | Default  | Description                                                                     |
+| --------------- | --------- | -------- | ------------------------------------------------------------------------------- |
+| `channel`       | `?string` | `null`   | The broadcast channel URI. Supports dynamic parameters like `chat.{room}`.      |
+| `dto`           | `?string` | `null`   | Fully qualified class name of a DTO/Model to extract the payload schema from.   |
+| `description`   | `string`  | `''`     | Human-readable description of the operation.                                    |
+| `name`          | `?string` | `null`   | Custom name for the event. Defaults to the class short name or `broadcastAs()`. |
+| `summary`       | `?string` | `null`   | Short summary of the operation (AsyncAPI 3.0).                                  |
+| `operationId`   | `?string` | `null`   | Unique identifier for the operation. Defaults to `{action}{eventName}`.         |
+| `action`        | `string`  | `'send'` | The operation action: `'send'` or `'receive'`.                                  |
+| `tags`          | `array`   | `[]`     | Tags for grouping operations in the specification.                              |
+| `examples`      | `array`   | `[]`     | Example payloads for the message.                                               |
+| `bindings`      | `array`   | `[]`     | Protocol-specific bindings (e.g., WebSocket configuration).                     |
+| `externalDocs`  | `?array`  | `null`   | External documentation link.                                                    |
+| `correlationId` | `?string` | `null`   | Correlation ID location for message tracing.                                    |
+| `security`      | `?array`  | `null`   | Custom security schemes for this specific operation.                            |
 
 ## DTO Schema Extraction
 

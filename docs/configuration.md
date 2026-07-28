@@ -62,15 +62,15 @@ return [
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `asyncapi_version` | The AsyncAPI specification version (default: `3.0.0`). |
-| `default_content_type` | Default content type for all messages. |
-| `info` | API metadata: title, version, description, contact, license. |
-| `servers` | Server configurations (host, protocol, security). |
-| `components.securitySchemes` | Reusable security scheme definitions. |
-| `components.schemas` | Additional reusable schemas (auto-generated from DTOs). |
-| `middleware` | Middleware to assign to the AsyncAPI routes. |
+| Option                       | Description                                                  |
+| ---------------------------- | ------------------------------------------------------------ |
+| `asyncapi_version`           | The AsyncAPI specification version (default: `3.0.0`).       |
+| `default_content_type`       | Default content type for all messages.                       |
+| `info`                       | API metadata: title, version, description, contact, license. |
+| `servers`                    | Server configurations (host, protocol, security).            |
+| `components.securitySchemes` | Reusable security scheme definitions.                        |
+| `components.schemas`         | Additional reusable schemas (auto-generated from DTOs).      |
+| `middleware`                 | Middleware to assign to the AsyncAPI routes.                 |
 
 ## Debug Mode
 
