@@ -9,10 +9,84 @@ use ReflectionEnum;
 use ReflectionNamedType;
 use ReflectionProperty;
 use Spatie\LaravelData\Data;
+use Laravel\Surveyor\Types\Contracts\Type as SurveyorType;
+use Laravel\Surveyor\Types\ClassType;
+use Laravel\Surveyor\Types\ArrayType;
+use Laravel\Surveyor\Types\ArrayShapeType;
+use Laravel\Surveyor\Types\UnionType;
+use Laravel\Surveyor\Types\IntType;
+use Laravel\Surveyor\Types\FloatType;
+use Laravel\Surveyor\Types\BoolType;
+use Laravel\Surveyor\Types\NumberType;
+use Laravel\Surveyor\Types\NullType;
 
 class SchemaConverter
 {
     private array $schemas = [];
+
+    /**
+     * Converte um tipo nativo do Surveyor em um JSON Schema válido.
+     */
+    public function convertSurveyorType(SurveyorType $type): array
+    {
+        if ($type instanceof ClassType) {
+            return $this->convert($type->value, true);
+        }
+
+        if ($type instanceof ArrayType) {
+            if ($type->isList()) {
+                $itemsSchema = [];
+                $valueType = $type->valueType();
+                if ($valueType && ! $valueType instanceof \Laravel\Surveyor\Types\MixedType) {
+                    $itemsSchema = $this->convertSurveyorType($valueType);
+                }
+                return [
+                    'type' => 'array',
+                    'items' => $itemsSchema,
+                ];
+            } else {
+                $properties = [];
+                foreach ($type->value as $key => $subType) {
+                    $properties[$key] = $this->convertSurveyorType($subType);
+                }
+                return [
+                    'type' => 'object',
+                    'properties' => (object) $properties,
+                ];
+            }
+        }
+
+        if ($type instanceof ArrayShapeType) {
+            return [
+                'type' => 'object',
+                'additionalProperties' => $this->convertSurveyorType($type->valueType),
+            ];
+        }
+
+        if ($type instanceof UnionType) {
+            $oneOf = [];
+            foreach ($type->types as $subType) {
+                if ($subType instanceof NullType) {
+                    continue; // Lidamos com null separadamente
+                }
+                $oneOf[] = $this->convertSurveyorType($subType);
+            }
+            if (count($oneOf) === 1) {
+                $schema = $oneOf[0];
+                return $schema; // Em OpenAPI 3.0 não tem nullable fácil, vamos simplificar o schema
+            }
+            if (count($oneOf) > 1) {
+                return ['oneOf' => $oneOf];
+            }
+        }
+
+        if ($type instanceof IntType) return ['type' => 'integer'];
+        if ($type instanceof FloatType || $type instanceof NumberType) return ['type' => 'number'];
+        if ($type instanceof BoolType) return ['type' => 'boolean'];
+        if ($type instanceof NullType) return ['type' => 'null'];
+        
+        return ['type' => 'string'];
+    }
 
     /**
      * Converte uma classe DTO em um array de propriedades JSON Schema.
@@ -104,10 +178,8 @@ class SchemaConverter
         }
 
         if ($isNullable) {
-            // Para AsyncAPI 3.0 / JSON Schema Draft 7, se o parser for rígido com o array de tipos:
             $currentType = $schema['type'] ?? 'string';
 
-            // Se já for uma referência, usa oneOf
             if (isset($schema['$ref'])) {
                 return [
                     'oneOf' => [
@@ -117,8 +189,6 @@ class SchemaConverter
                 ];
             }
 
-            // Para tipos simples, alguns parsers preferem a lista, outros oneOf.
-            // Como o erro indicou que 'type' deve ser um dos valores permitidos (singular), vamos usar oneOf.
             return [
                 'oneOf' => [
                     $schema,

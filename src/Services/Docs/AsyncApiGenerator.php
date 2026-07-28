@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Victormgomes\AsyncApi\Services\Docs;
 
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Support\Facades\Log;
 use ReflectionClass;
-use ReflectionNamedType;
-use ReflectionProperty;
-use Spatie\LaravelData\Data;
 use stdClass;
 use Throwable;
 use Victormgomes\AsyncApi\Attributes\AsyncApi;
+use Victormgomes\AsyncApi\Attributes\AsyncApiIgnore;
 use Laravel\Ranger\Ranger;
 use Laravel\Surveyor\Analyzer\Analyzer;
 use Laravel\Surveyor\Types\ArrayType;
@@ -101,73 +98,17 @@ class AsyncApiGenerator
 
         try {
             $reflection = new ReflectionClass($className);
-            $attributes = $reflection->getAttributes(AsyncApi::class);
-
-            if (empty($attributes)) {
+            
+            // Permite ignorar o evento se tiver o atributo AsyncApiIgnore
+            if (!empty($reflection->getAttributes(AsyncApiIgnore::class))) {
+                $this->log("   🚫 Ignorado por AsyncApiIgnore: $className");
                 return false;
             }
 
-            $attr = $attributes[0]->newInstance();
+            $attributes = $reflection->getAttributes(AsyncApi::class);
+            $attr = !empty($attributes) ? $attributes[0]->newInstance() : new AsyncApi();
 
             $this->log("📝 Processando Classe: $className");
-
-            $dtoClass = $attr->dto;
-            if (! $dtoClass) {
-                $this->log('   ❓ DTO não definido. Inspecionando construtor para encontrar o objeto de payload...');
-
-                if ($reflection->hasMethod('__construct')) {
-                    $params = $reflection->getMethod('__construct')->getParameters();
-                    $potentialPayloads = [];
-
-                    foreach ($params as $param) {
-                        $type = $param->getType();
-                        if ($type instanceof ReflectionNamedType && ! $type->isBuiltin()) {
-                            $typeName = $type->getName();
-
-                            if ($param->getName() === 'data') {
-                                $dtoClass = $typeName;
-                                break;
-                            }
-
-                            if (is_subclass_of($typeName, Data::class)) {
-                                $potentialPayloads[] = $typeName;
-
-                                continue;
-                            }
-
-                            if (str_contains($typeName, '\\DTOs\\') || str_ends_with($typeName, 'DTO')) {
-                                $potentialPayloads[] = $typeName;
-                            }
-                        }
-                    }
-
-                    if (! $dtoClass && ! empty($potentialPayloads)) {
-                        $dtoClass = $potentialPayloads[0];
-                    }
-                }
-
-                if (! $dtoClass) {
-                    $shortName = $reflection->getShortName();
-                    $possibleGuesses = [
-                        str_replace(['\\Events\\', $shortName], ['\\DTOs\\', $shortName.'EventDTO'], $className),
-                        str_replace(['\\Events\\', $shortName], ['\\DTOs\\', $shortName.'DTO'], $className),
-                    ];
-
-                    foreach ($possibleGuesses as $guessed) {
-                        if (class_exists($guessed)) {
-                            $dtoClass = $guessed;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (! $dtoClass || ! class_exists($dtoClass)) {
-                $this->log("   ⚠️ DTO não encontrado para $className. Usando a própria classe do evento como payload.");
-                $dtoClass = $className;
-            } else {
-                $this->log("   ✅ DTO Encontrado: $dtoClass");
-            }
 
             $channelUri = $attr->channel;
             if (! $channelUri) {
@@ -176,7 +117,6 @@ class AsyncApiGenerator
 
             if (! $channelUri) {
                 $this->log('   ❌ ERRO: Não foi possível ler o canal automaticamente.');
-
                 return false;
             }
 
@@ -191,7 +131,13 @@ class AsyncApiGenerator
 
             $eventName = $attr->name ?? $this->safelyGetBroadcastAs($reflection);
 
-            $payloadSchema = $this->schemaConverter->convert($dtoClass, true);
+            // Delega a geração do schema inteiramente ao Surveyor Type
+            $payloadSchema = $this->schemaConverter->convertSurveyorType($event->data);
+            
+            // Envolve o schema caso o Surveyor retorne apenas propriedades isoladas de objeto e não o object root
+            if (isset($payloadSchema['properties']) && !isset($payloadSchema['type'])) {
+                $payloadSchema['type'] = 'object';
+            }
 
             $channelKey = str_replace(['{', '}', '.', '/'], '_', $channelUri);
             if (! isset($structure['channels'][$channelKey])) {
@@ -250,7 +196,7 @@ class AsyncApiGenerator
                 ],
             ]);
 
-            $this->log("   ✨ Sucesso! Adicionado ao canal: $channelUri");
+            $this->log("   ✨ Sucesso! Adicionado ao canal: $channelUri com schema dinâmico.");
             
             return true;
 
@@ -280,7 +226,7 @@ class AsyncApiGenerator
     private function extractChannelUriFromType(mixed $type): ?string
     {
         if ($type instanceof ClassType) {
-            $prop = new ReflectionProperty(ClassType::class, 'constructorArguments');
+            $prop = new \ReflectionProperty(ClassType::class, 'constructorArguments');
             $prop->setAccessible(true);
             $args = $prop->getValue($type);
             
