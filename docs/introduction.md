@@ -19,19 +19,17 @@ AsyncAPI 3.0 specification.
 
 ## How It Works
 
-Add the `#[AsyncApi]` attribute to your broadcast event classes:
+The package leverages Laravel Surveyor to automatically discover any event class in your application that implements `ShouldBroadcast`.
 
 ```php
-use Victormgomes\AsyncApi\Attributes\AsyncApi;
-
-#[AsyncApi]
 class ChatMessage implements ShouldBroadcast
 {
     // ...
 }
 ```
 
-The package discovers all `#[AsyncApi]`-attributed events that implement
-`ShouldBroadcast`, extracts their schemas, and registers a route that serves
-the AsyncAPI 3.0 JSON specification. Visit `/docs/ws` in your application to
-view the interactive documentation.
+By simply implementing `ShouldBroadcast`, your event is instantly documented. The package uses Abstract Syntax Tree (AST) analysis to automatically infer the payload schema directly from your properties, DTOs, and method returns without requiring any manual reflection or hints!
+
+If you want to customize the generated schema (like overriding the channel name or adding descriptions), you can optionally use the `#[AsyncApi]` attribute. If you want to hide an event, use `#[AsyncApiIgnore]`.
+
+The package exposes a route that serves the AsyncAPI 3.0 JSON specification. Visit `/docs/ws` in your application to view the interactive documentation UI.

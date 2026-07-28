@@ -7,23 +7,18 @@ description: Automatically generate AsyncAPI 3.0 documentation from Laravel broa
 
 ## Overview
 
-Automatically generate [AsyncAPI 3.0](https://www.asyncapi.com/) specifications from your Laravel broadcast events. Uses PHP 8 attributes for a clean, declarative developer experience. Integrates seamlessly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
+Automatically generate [AsyncAPI 3.0](https://www.asyncapi.com/) specifications from your Laravel broadcast events. The package uses Laravel Surveyor (Abstract Syntax Tree analysis) to infer channels, operation names, and complex payloads (DTOs, arrays, PHPDoc properties) directly from your `ShouldBroadcast` event classes automatically.
 
-## Recommended Usage (2 steps)
+Integrates seamlessly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
 
-### 1. Annotate Your Broadcast Events
+## 🚀 Quick Start
 
-Add the `#[AsyncApi]` attribute to any event class that implements `ShouldBroadcast`. Specify a DTO class for automatic payload schema extraction.
+By default, any event that implements `ShouldBroadcast` is automatically documented! You don't need to add any attributes.
 
 ```php
-use Victormgomes\AsyncApi\Attributes\AsyncApi;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\Channel;
 
-#[AsyncApi(
-    channel: 'chat.{room}',
-    dto: \App\DTOs\ChatMessageDTO::class,
-    description: 'A new chat message in a room',
-    action: 'send',
-)]
 class ChatMessage implements ShouldBroadcast
 {
     public function __construct(
@@ -38,6 +33,8 @@ class ChatMessage implements ShouldBroadcast
     }
 }
 ```
+
+To override defaults or hide an event, use the optional `#[AsyncApi]` or `#[AsyncApiIgnore]` attributes.
 
 ### 2. Generate the Specification
 
