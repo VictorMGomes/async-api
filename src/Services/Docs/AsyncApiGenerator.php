@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace Victormgomes\AsyncApi\Services\Docs;
 
 use Illuminate\Support\Facades\Log;
-use ReflectionClass;
-use stdClass;
-use Throwable;
-use Victormgomes\AsyncApi\Attributes\AsyncApi;
-use Victormgomes\AsyncApi\Attributes\AsyncApiIgnore;
+use Laravel\Ranger\Components\BroadcastEvent;
 use Laravel\Ranger\Ranger;
 use Laravel\Surveyor\Analyzer\Analyzer;
 use Laravel\Surveyor\Types\ArrayType;
 use Laravel\Surveyor\Types\ClassType;
 use Laravel\Surveyor\Types\StringType;
+use ReflectionClass;
+use stdClass;
+use Throwable;
+use Victormgomes\AsyncApi\Attributes\AsyncApi;
+use Victormgomes\AsyncApi\Attributes\AsyncApiIgnore;
 
 class AsyncApiGenerator
 {
@@ -33,8 +34,8 @@ class AsyncApiGenerator
         ];
 
         $protocol = config('async-api.server_scheme', 'https') === 'https' ? 'wss' : 'ws';
-        $host = config('async-api.server_host', 'localhost') . ':' . config('async-api.server_port', 8080);
-        
+        $host = config('async-api.server_host', 'localhost').':'.config('async-api.server_port', 8080);
+
         $servers = [
             'default' => [
                 'host' => $host,
@@ -59,7 +60,7 @@ class AsyncApiGenerator
                         ],
                     ],
                 ],
-            ]
+            ],
         ];
 
         $structure = [
@@ -77,23 +78,23 @@ class AsyncApiGenerator
                         'scheme' => 'bearer',
                         'bearerFormat' => 'JWT',
                         'description' => config('async-api.security_description', 'Enter your Sanctum token to authenticate with the broadcasting server.'),
-                    ]
+                    ],
                 ],
             ],
         ];
 
         $paths = array_filter([app_path(), base_path('Modules'), base_path('modules')], 'is_dir');
-        
+
         $this->log('🔍 Varrendo a aplicação com Ranger nos diretórios: '.implode(', ', $paths));
 
         $ranger = app(Ranger::class);
         $ranger->setAppPaths(...$paths);
 
         $analyzer = app(Analyzer::class);
-        
+
         $validClassesCount = 0;
 
-        $ranger->onBroadcastEvent(function (\Laravel\Ranger\Components\BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount) {
+        $ranger->onBroadcastEvent(function (BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount) {
             $this->log("💎 EVENTO BROADCAST ENCONTRADO (Ranger): {$event->className}");
             $processed = $this->processEvent($event, $analyzer, $structure);
             if ($processed) {
@@ -130,21 +131,22 @@ class AsyncApiGenerator
         return $structure;
     }
 
-    private function processEvent(\Laravel\Ranger\Components\BroadcastEvent $event, Analyzer $analyzer, array &$structure): bool
+    private function processEvent(BroadcastEvent $event, Analyzer $analyzer, array &$structure): bool
     {
         $className = $event->className;
 
         try {
             $reflection = new ReflectionClass($className);
-            
+
             // Permite ignorar o evento se tiver o atributo AsyncApiIgnore
-            if (!empty($reflection->getAttributes(AsyncApiIgnore::class))) {
+            if (! empty($reflection->getAttributes(AsyncApiIgnore::class))) {
                 $this->log("   🚫 Ignorado por AsyncApiIgnore: $className");
+
                 return false;
             }
 
             $attributes = $reflection->getAttributes(AsyncApi::class);
-            $attr = !empty($attributes) ? $attributes[0]->newInstance() : new AsyncApi();
+            $attr = ! empty($attributes) ? $attributes[0]->newInstance() : new AsyncApi;
 
             $this->log("📝 Processando Classe: $className");
 
@@ -155,6 +157,7 @@ class AsyncApiGenerator
 
             if (! $channelUri) {
                 $this->log('   ❌ ERRO: Não foi possível ler o canal automaticamente.');
+
                 return false;
             }
 
@@ -172,9 +175,9 @@ class AsyncApiGenerator
 
             // Delega a geração do schema inteiramente ao Surveyor Type
             $payloadSchema = $this->schemaConverter->convertSurveyorType($event->data);
-            
+
             // Envolve o schema caso o Surveyor retorne apenas propriedades isoladas de objeto e não o object root
-            if (isset($payloadSchema['properties']) && !isset($payloadSchema['type'])) {
+            if (isset($payloadSchema['properties']) && ! isset($payloadSchema['type'])) {
                 $payloadSchema['type'] = 'object';
             }
 
@@ -236,11 +239,12 @@ class AsyncApiGenerator
             ]);
 
             $this->log("   ✨ Sucesso! Adicionado ao canal: $channelUri com schema dinâmico.");
-            
+
             return true;
 
         } catch (Throwable $e) {
             $this->log("   💀 EXCEPTION em $className: ".$e->getMessage());
+
             return false;
         }
     }
@@ -252,12 +256,13 @@ class AsyncApiGenerator
             if (! $analyzed->hasMethod('broadcastOn')) {
                 return null;
             }
-            
+
             $returnType = $analyzed->getMethod('broadcastOn')->returnType();
-            
+
             return $this->extractChannelUriFromType($returnType);
         } catch (Throwable $e) {
-            $this->log("   💀 ERRO AO INFERIR CANAL via Surveyor: ".$e->getMessage());
+            $this->log('   💀 ERRO AO INFERIR CANAL via Surveyor: '.$e->getMessage());
+
             return null;
         }
     }
@@ -267,15 +272,15 @@ class AsyncApiGenerator
         if ($type instanceof ClassType) {
             $prop = new \ReflectionProperty(ClassType::class, 'constructorArguments');
             $args = $prop->getValue($type);
-            
+
             if (is_array($args) && count($args) > 0 && $args[0] instanceof StringType) {
                 return $args[0]->value;
             }
         }
-        
+
         if ($type instanceof ArrayType) {
             if (! empty($type->value)) {
-                // Para manter a compatibilidade original que esperava uma string de URI, 
+                // Para manter a compatibilidade original que esperava uma string de URI,
                 // retornamos a primeira URI válida encontrada no array.
                 foreach ($type->value as $item) {
                     $channel = $this->extractChannelUriFromType($item);
@@ -285,7 +290,7 @@ class AsyncApiGenerator
                 }
             }
         }
-        
+
         return null;
     }
 

@@ -7,6 +7,4 @@ namespace Victormgomes\AsyncApi\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class AsyncApiIgnore
-{
-}
+class AsyncApiIgnore {}

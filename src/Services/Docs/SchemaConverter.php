@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace Victormgomes\AsyncApi\Services\Docs;
 
+use Laravel\Surveyor\Analyzer\Analyzer;
+use Laravel\Surveyor\Types\ArrayShapeType;
+use Laravel\Surveyor\Types\ArrayType;
+use Laravel\Surveyor\Types\BoolType;
+use Laravel\Surveyor\Types\ClassType;
+use Laravel\Surveyor\Types\Contracts\Type as SurveyorType;
+use Laravel\Surveyor\Types\FloatType;
+use Laravel\Surveyor\Types\IntType;
+use Laravel\Surveyor\Types\MixedType;
+use Laravel\Surveyor\Types\NullType;
+use Laravel\Surveyor\Types\NumberType;
+use Laravel\Surveyor\Types\UnionType;
 use ReflectionClass;
 use ReflectionEnum;
-use Laravel\Surveyor\Analyzer\Analyzer;
-use Laravel\Surveyor\Types\Contracts\Type as SurveyorType;
-use Laravel\Surveyor\Types\ClassType;
-use Laravel\Surveyor\Types\ArrayType;
-use Laravel\Surveyor\Types\ArrayShapeType;
-use Laravel\Surveyor\Types\UnionType;
-use Laravel\Surveyor\Types\IntType;
-use Laravel\Surveyor\Types\FloatType;
-use Laravel\Surveyor\Types\BoolType;
-use Laravel\Surveyor\Types\NumberType;
-use Laravel\Surveyor\Types\NullType;
 
 class SchemaConverter
 {
@@ -34,16 +35,18 @@ class SchemaConverter
                 if ($enumReflection->isBacked()) {
                     $backingType = $enumReflection->getBackingType();
                     $backingTypeName = $backingType?->getName() ?? 'string';
-                    
+
                     return [
                         'type' => $backingTypeName === 'int' ? 'integer' : 'string',
-                        'enum' => array_map(fn ($case) => $case->value, $type->value::cases()),
+                        'enum' => array_map(function (\UnitEnum $case) {
+                            return $case instanceof \BackedEnum ? $case->value : $case->name;
+                        }, $type->value::cases()),
                     ];
                 }
 
                 return [
                     'type' => 'string',
-                    'enum' => array_map(fn ($case) => $case->name, $type->value::cases()),
+                    'enum' => array_map(fn (\UnitEnum $case) => $case->name, $type->value::cases()),
                 ];
             }
 
@@ -54,9 +57,10 @@ class SchemaConverter
             if ($type->isList()) {
                 $itemsSchema = [];
                 $valueType = $type->valueType();
-                if ($valueType && ! $valueType instanceof \Laravel\Surveyor\Types\MixedType) {
+                if (! $valueType instanceof MixedType) {
                     $itemsSchema = $this->convertSurveyorType($valueType);
                 }
+
                 return [
                     'type' => 'array',
                     'items' => $itemsSchema,
@@ -66,6 +70,7 @@ class SchemaConverter
                 foreach ($type->value as $key => $subType) {
                     $properties[$key] = $this->convertSurveyorType($subType);
                 }
+
                 return [
                     'type' => 'object',
                     'properties' => (object) $properties,
@@ -90,6 +95,7 @@ class SchemaConverter
             }
             if (count($oneOf) === 1) {
                 $schema = $oneOf[0];
+
                 return $schema; // Em OpenAPI 3.0 não tem nullable fácil, vamos simplificar o schema
             }
             if (count($oneOf) > 1) {
@@ -97,11 +103,19 @@ class SchemaConverter
             }
         }
 
-        if ($type instanceof IntType) return ['type' => 'integer'];
-        if ($type instanceof FloatType || $type instanceof NumberType) return ['type' => 'number'];
-        if ($type instanceof BoolType) return ['type' => 'boolean'];
-        if ($type instanceof NullType) return ['type' => 'null'];
-        
+        if ($type instanceof IntType) {
+            return ['type' => 'integer'];
+        }
+        if ($type instanceof FloatType || $type instanceof NumberType) {
+            return ['type' => 'number'];
+        }
+        if ($type instanceof BoolType) {
+            return ['type' => 'boolean'];
+        }
+        if ($type instanceof NullType) {
+            return ['type' => 'null'];
+        }
+
         return ['type' => 'string'];
     }
 
@@ -134,7 +148,7 @@ class SchemaConverter
         // Agora usamos o Analyzer do Surveyor para extrair as propriedades em vez do Reflection nativo
         $analyzer = app(Analyzer::class);
         $analyzed = $analyzer->analyzeClass($className)->result();
-        
+
         $properties = [];
 
         foreach ($analyzed->publicProperties() as $prop) {
