@@ -53,4 +53,15 @@ return [
     |
     */
     'middleware' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Debug Mode
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, detailed information about the scanning and schema
+    | generation process will be logged via Log::info().
+    |
+    */
+    'debug' => env('APP_DEBUG', true),
 ];

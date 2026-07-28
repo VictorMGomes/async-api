@@ -17,6 +17,7 @@ After publishing the configuration file (`php artisan vendor:publish --tag="asyn
 | `server_app_key`             | The Reverb/Pusher app key.                                   |
 | `security_description`       | The description of the Bearer authentication method.         |
 | `middleware`                 | Middleware to assign to the AsyncAPI routes.                 |
+| `debug`                      | Enable detailed logging during scanning (default: `true`).   |
 
 ## Debug Mode
 
