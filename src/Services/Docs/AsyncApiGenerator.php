@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Victormgomes\AsyncApi\Services\Docs;
 
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Support\Facades\Log;
+use Laravel\Ranger\Components\BroadcastEvent;
+use Laravel\Ranger\Ranger;
+use Laravel\Surveyor\Analyzer\Analyzer;
+use Laravel\Surveyor\Types\ArrayType;
+use Laravel\Surveyor\Types\ClassType;
+use Laravel\Surveyor\Types\StringType;
 use ReflectionClass;
-use ReflectionNamedType;
-use Spatie\LaravelData\Data;
 use stdClass;
-use Symfony\Component\Finder\Finder;
 use Throwable;
 use Victormgomes\AsyncApi\Attributes\AsyncApi;
+use Victormgomes\AsyncApi\Attributes\AsyncApiIgnore;
 
 class AsyncApiGenerator
 {
@@ -24,31 +27,84 @@ class AsyncApiGenerator
     {
         $this->log('🚀 INICIANDO GERAÇÃO (GLOBAL CONFIG MODE)...');
 
-        $info = config('asyncapi.info', []);
+        $info = [
+            'title' => config('async-api.info_title', config('app.name').' Broadcasting API'),
+            'version' => config('async-api.info_version', '1.0.0'),
+            'description' => config('async-api.info_description', 'AsyncAPI documentation for the broadcasting API'),
+        ];
 
-        $info['title'] = $info['title'] ?? config('app.name').' Broadcasting API';
-        $info['version'] = $info['version'] ?? '1.0.0';
+        $protocol = config('async-api.server_scheme', 'https') === 'https' ? 'wss' : 'ws';
+        $host = config('async-api.server_host', 'localhost').':'.config('async-api.server_port', 8080);
+
+        $servers = [
+            'default' => [
+                'host' => $host,
+                'protocol' => $protocol,
+                'protocolVersion' => '1.3',
+                'description' => config('async-api.server_description', 'Laravel Reverb Server (Pusher Protocol)'),
+                'security' => [
+                    ['$ref' => '#/components/securitySchemes/bearerAuth'],
+                ],
+                'bindings' => [
+                    'ws' => [
+                        'method' => 'GET',
+                        'query' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'appKey' => [
+                                    'type' => 'string',
+                                    'description' => 'The Reverb/Pusher App Key',
+                                    'example' => config('async-api.server_app_key', 'your-app-key-here'),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
 
         $structure = [
-            'asyncapi' => config('asyncapi.asyncapi_version', '3.0.0'),
+            'asyncapi' => config('async-api.asyncapi_version', '3.0.0'),
             'info' => array_filter($info),
-            'defaultContentType' => config('asyncapi.default_content_type', 'application/json'),
-            'servers' => config('asyncapi.servers', []),
+            'defaultContentType' => config('async-api.default_content_type', 'application/json'),
+            'servers' => $servers,
             'channels' => [],
             'operations' => [],
             'components' => [
                 'schemas' => [],
-                'securitySchemes' => config('asyncapi.components.securitySchemes', []),
+                'securitySchemes' => [
+                    'bearerAuth' => [
+                        'type' => 'http',
+                        'scheme' => 'bearer',
+                        'bearerFormat' => 'JWT',
+                        'description' => config('async-api.security_description', 'Enter your Sanctum token to authenticate with the broadcasting server.'),
+                    ],
+                ],
             ],
         ];
 
-        $classes = $this->scanClasses();
+        $paths = array_filter([app_path(), base_path('Modules'), base_path('modules')], 'is_dir');
 
-        $this->log('✅ SCAN FINALIZADO. Classes válidas encontradas: '.count($classes));
+        $this->log('🔍 Varrendo a aplicação com Ranger nos diretórios: '.implode(', ', $paths));
 
-        foreach ($classes as $class) {
-            $this->processClass($class, $structure);
-        }
+        $ranger = app(Ranger::class);
+        $ranger->setAppPaths(...$paths);
+
+        $analyzer = app(Analyzer::class);
+
+        $validClassesCount = 0;
+
+        $ranger->onBroadcastEvent(function (BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount) {
+            $this->log("💎 EVENTO BROADCAST ENCONTRADO (Ranger): {$event->className}");
+            $processed = $this->processEvent($event, $analyzer, $structure);
+            if ($processed) {
+                $validClassesCount++;
+            }
+        });
+
+        $ranger->walk();
+
+        $this->log('✅ SCAN FINALIZADO. Classes válidas processadas: '.$validClassesCount);
 
         // Adiciona schemas reutilizáveis coletados durante o processamento
         $structure['components']['schemas'] = $this->schemaConverter->getSchemas();
@@ -75,92 +131,55 @@ class AsyncApiGenerator
         return $structure;
     }
 
-    private function processClass(string $className, array &$structure): void
+    private function processEvent(BroadcastEvent $event, Analyzer $analyzer, array &$structure): bool
     {
+        $className = $event->className;
+
         try {
             $reflection = new ReflectionClass($className);
-            $attributes = $reflection->getAttributes(AsyncApi::class);
 
-            if (empty($attributes)) {
-                return;
+            // Permite ignorar o evento se tiver o atributo AsyncApiIgnore
+            if (! empty($reflection->getAttributes(AsyncApiIgnore::class))) {
+                $this->log("   🚫 Ignorado por AsyncApiIgnore: $className");
+
+                return false;
             }
 
-            $attr = $attributes[0]->newInstance();
+            $attributes = $reflection->getAttributes(AsyncApi::class);
+            $attr = ! empty($attributes) ? $attributes[0]->newInstance() : new AsyncApi;
 
             $this->log("📝 Processando Classe: $className");
 
-            $dtoClass = $attr->dto;
-            if (! $dtoClass) {
-                $this->log('   ❓ DTO não definido. Inspecionando construtor para encontrar o objeto de payload...');
-
-                if ($reflection->hasMethod('__construct')) {
-                    $params = $reflection->getMethod('__construct')->getParameters();
-                    $potentialPayloads = [];
-
-                    foreach ($params as $param) {
-                        $type = $param->getType();
-                        if ($type instanceof ReflectionNamedType && ! $type->isBuiltin()) {
-                            $typeName = $type->getName();
-
-                            if ($param->getName() === 'data') {
-                                $dtoClass = $typeName;
-                                break;
-                            }
-
-                            if (is_subclass_of($typeName, Data::class)) {
-                                $potentialPayloads[] = $typeName;
-
-                                continue;
-                            }
-
-                            if (str_contains($typeName, '\\DTOs\\') || str_ends_with($typeName, 'DTO')) {
-                                $potentialPayloads[] = $typeName;
-                            }
-                        }
-                    }
-
-                    if (! $dtoClass && ! empty($potentialPayloads)) {
-                        $dtoClass = $potentialPayloads[0];
-                    }
-                }
-
-                if (! $dtoClass) {
-                    $shortName = $reflection->getShortName();
-                    $possibleGuesses = [
-                        str_replace(['\\Events\\', $shortName], ['\\DTOs\\', $shortName.'EventDTO'], $className),
-                        str_replace(['\\Events\\', $shortName], ['\\DTOs\\', $shortName.'DTO'], $className),
-                    ];
-
-                    foreach ($possibleGuesses as $guessed) {
-                        if (class_exists($guessed)) {
-                            $dtoClass = $guessed;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (! $dtoClass || ! class_exists($dtoClass)) {
-                $this->log("   ⚠️ DTO não encontrado para $className. Usando a própria classe do evento como payload.");
-                $dtoClass = $className;
-            } else {
-                $this->log("   ✅ DTO Encontrado: $dtoClass");
-            }
-
             $channelUri = $attr->channel;
             if (! $channelUri) {
-                $channelUri = $this->inferChannelFromCode($reflection);
+                $channelUri = $this->inferChannelFromSurveyor($className, $analyzer);
             }
 
             if (! $channelUri) {
                 $this->log('   ❌ ERRO: Não foi possível ler o canal automaticamente.');
 
-                return;
+                return false;
             }
 
-            $eventName = $attr->name ?? $this->safelyGetBroadcastAs($reflection);
+            // Normaliza as variáveis PHP injetadas no channel URI para o formato AsyncAPI {param}
+            $channelUri = preg_replace_callback('/\{\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)\}/', function ($m) {
+                return '{'.$m[1].'}';
+            }, $channelUri);
 
-            $payloadSchema = $this->schemaConverter->convert($dtoClass, true);
+            $channelUri = preg_replace_callback('/\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)/', function ($m) {
+                return '{'.$m[1].'}';
+            }, $channelUri);
+
+            // Usa o nome da mensagem extraído nativamente pelo Surveyor/Ranger via $event->name
+            $eventName = $attr->name ?? $event->name;
+
+            // Delega a geração do schema inteiramente ao Surveyor Type
+            $payloadSchema = $this->schemaConverter->convertSurveyorType($event->data);
+
+            // Envolve o schema caso o Surveyor retorne apenas propriedades isoladas de objeto e não o object root
+            if (isset($payloadSchema['properties']) && ! isset($payloadSchema['type'])) {
+                $payloadSchema['type'] = 'object';
+            }
 
             $channelKey = str_replace(['{', '}', '.', '/'], '_', $channelUri);
             if (! isset($structure['channels'][$channelKey])) {
@@ -219,103 +238,60 @@ class AsyncApiGenerator
                 ],
             ]);
 
-            $this->log("   ✨ Sucesso! Adicionado ao canal: $channelUri");
+            $this->log("   ✨ Sucesso! Adicionado ao canal: $channelUri com schema dinâmico.");
+
+            return true;
 
         } catch (Throwable $e) {
             $this->log("   💀 EXCEPTION em $className: ".$e->getMessage());
+
+            return false;
         }
     }
 
-    private function inferChannelFromCode(ReflectionClass $reflection): ?string
+    private function inferChannelFromSurveyor(string $className, Analyzer $analyzer): ?string
     {
-        $fileName = $reflection->getFileName();
-        if (! $fileName) {
+        try {
+            $analyzed = $analyzer->analyzeClass($className)->result();
+            if (! $analyzed->hasMethod('broadcastOn')) {
+                return null;
+            }
+
+            $returnType = $analyzed->getMethod('broadcastOn')->returnType();
+
+            return $this->extractChannelUriFromType($returnType);
+        } catch (Throwable $e) {
+            $this->log('   💀 ERRO AO INFERIR CANAL via Surveyor: '.$e->getMessage());
+
             return null;
         }
+    }
 
-        $content = file_get_contents($fileName);
-        $pattern = '/new\s+(?:Private|Presence|Channel)?Channel\s*\(\s*["\']([^"\']+)["\']\s*\)/';
+    private function extractChannelUriFromType(mixed $type): ?string
+    {
+        if ($type instanceof ClassType) {
+            $prop = new \ReflectionProperty(ClassType::class, 'constructorArguments');
+            $args = $prop->getValue($type);
 
-        if (preg_match($pattern, $content, $matches)) {
-            $rawChannel = $matches[1];
+            if (is_array($args) && count($args) > 0 && $args[0] instanceof StringType) {
+                return $args[0]->value;
+            }
+        }
 
-            $cleanChannel = preg_replace_callback('/\{\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)\}/', function ($m) {
-                return '{'.$m[1].'}';
-            }, $rawChannel);
-
-            $cleanChannel = preg_replace_callback('/\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)/', function ($m) {
-                return '{'.$m[1].'}';
-            }, $cleanChannel);
-
-            return $cleanChannel;
+        if ($type instanceof ArrayType) {
+            if (! empty($type->value)) {
+                // Para manter a compatibilidade original que esperava uma string de URI,
+                // retornamos a primeira URI válida encontrada no array.
+                foreach ($type->value as $item) {
+                    $channel = $this->extractChannelUriFromType($item);
+                    if ($channel) {
+                        return $channel;
+                    }
+                }
+            }
         }
 
         return null;
-    }
-
-    private function scanClasses(): array
-    {
-        $validClasses = [];
-        $paths = array_filter([app_path(), base_path('Modules'), base_path('modules')], 'is_dir');
-
-        if (empty($paths)) {
-            return [];
-        }
-
-        $this->log('🔍 Varrendo diretórios: '.implode(', ', $paths));
-
-        $finder = new Finder;
-        $finder->files()->in($paths)->name('*.php');
-
-        foreach ($finder as $file) {
-            $content = file_get_contents($file->getRealPath());
-
-            if (! preg_match('/namespace\s+([a-zA-Z0-9_\\\\]+);/s', $content, $mNamespace)) {
-                continue;
-            }
-            if (! preg_match('/class\s+([a-zA-Z0-9_]+)/s', $content, $mClass)) {
-                continue;
-            }
-
-            $fullClass = $mNamespace[1].'\\'.$mClass[1];
-
-            try {
-                if (! class_exists($fullClass)) {
-                    continue;
-                }
-
-                $reflection = new ReflectionClass($fullClass);
-
-                if (! $reflection->implementsInterface(ShouldBroadcast::class)) {
-                    continue;
-                }
-
-                $attrs = $reflection->getAttributes(AsyncApi::class);
-                if (empty($attrs)) {
-                    continue;
-                }
-
-                $this->log("💎 CLASSE VÁLIDA ENCONTRADA: $fullClass");
-                $validClasses[] = $fullClass;
-
-            } catch (Throwable $e) {
-                continue;
-            }
-        }
-
-        return array_unique($validClasses);
-    }
-
-    private function safelyGetBroadcastAs(ReflectionClass $reflection): string
-    {
-        try {
-            if ($reflection->hasMethod('broadcastAs')) {
-                return $reflection->newInstanceWithoutConstructor()->broadcastAs();
-            }
-        } catch (Throwable $e) {
-        }
-
-        return $reflection->getShortName();
     }
 
     private function log(string $message): void

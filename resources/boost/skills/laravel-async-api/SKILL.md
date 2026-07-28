@@ -7,23 +7,18 @@ description: Automatically generate AsyncAPI 3.0 documentation from Laravel broa
 
 ## Overview
 
-Automatically generate [AsyncAPI 3.0](https://www.asyncapi.com/) specifications from your Laravel broadcast events. Uses PHP 8 attributes for a clean, declarative developer experience. Integrates seamlessly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
+Automatically generate [AsyncAPI 3.0](https://www.asyncapi.com/) specifications from your Laravel broadcast events. The package uses static code analysis to infer channels, operation names, and complex payloads (DTOs, arrays, PHPDoc properties) directly from your `ShouldBroadcast` event classes automatically.
 
-## Recommended Usage (2 steps)
+Integrates seamlessly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
 
-### 1. Annotate Your Broadcast Events
+## 🚀 Quick Start
 
-Add the `#[AsyncApi]` attribute to any event class that implements `ShouldBroadcast`. Specify a DTO class for automatic payload schema extraction.
+By default, any event that implements `ShouldBroadcast` is automatically documented! You don't need to add any attributes.
 
 ```php
-use Victormgomes\AsyncApi\Attributes\AsyncApi;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\Channel;
 
-#[AsyncApi(
-    channel: 'chat.{room}',
-    dto: \App\DTOs\ChatMessageDTO::class,
-    description: 'A new chat message in a room',
-    action: 'send',
-)]
 class ChatMessage implements ShouldBroadcast
 {
     public function __construct(
@@ -38,6 +33,8 @@ class ChatMessage implements ShouldBroadcast
     }
 }
 ```
+
+To override defaults or hide an event, use the optional `#[AsyncApi]` or `#[AsyncApiIgnore]` attributes.
 
 ### 2. Generate the Specification
 
@@ -54,7 +51,6 @@ The file is written to `public/docs/asyncapi.json`.
 | Parameter     | Type      | Default  | Description                                                    |
 | ------------- | --------- | -------- | -------------------------------------------------------------- |
 | `channel`     | `?string` | `null`   | Broadcast channel URI (supports `{param}` placeholders).       |
-| `dto`         | `?string` | `null`   | DTO/Model class for payload schema extraction.                 |
 | `description` | `string`  | `''`     | Human-readable operation description.                          |
 | `name`        | `?string` | `null`   | Custom event name (defaults to class name or `broadcastAs()`). |
 | `summary`     | `?string` | `null`   | Short summary (AsyncAPI 3.0).                                  |
@@ -62,15 +58,6 @@ The file is written to `public/docs/asyncapi.json`.
 | `action`      | `string`  | `'send'` | `'send'` or `'receive'`.                                       |
 | `tags`        | `array`   | `[]`     | Tags for grouping operations.                                  |
 | `security`    | `?array`  | `null`   | Per-operation security overrides.                              |
-
-## DTO Schema Extraction
-
-The package reflects on all public properties of the DTO class to generate a JSON Schema. Supported DTO patterns:
-
-- Plain PHP classes with typed public properties
-- `Spatie\LaravelData\Data` subclasses
-
-If no `dto` is specified, the package auto-discovers the payload by inspecting constructor parameters and naming conventions (`*DTO`, `*EventDTO`).
 
 ## Configuration
 
@@ -83,9 +70,9 @@ php artisan vendor:publish --tag="async-api-config"
 Key configuration options in `config/async-api.php`:
 
 - `asyncapi_version` — Specification version (default: `3.0.0`)
-- `info` — API metadata (title, version, description)
-- `servers` — Server configurations (host, protocol, security)
-- `components.securitySchemes` — Reusable security definitions
+- `info_*` — API metadata (`title`, `version`, `description`)
+- `server_*` — Server configurations (`host`, `port`, `scheme`, `app_key`)
+- `security_description` — Bearer Auth description
 - `debug` — Enable detailed logging during generation
 
 ## Advanced Usage & Documentation

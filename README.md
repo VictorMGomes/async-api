@@ -1,7 +1,7 @@
 # Laravel Async API
 
-Automatically generates AsyncAPI 3.0 documentation from your Laravel broadcast
-events using PHP attributes.
+Automatically generates AsyncAPI 3.0 documentation from your Laravel broadcasting
+implementations.
 
 ## Package Status
 
@@ -29,7 +29,6 @@ specifications with zero manual effort.
 ## Features
 
 - **Zero-Effort Documentation:** Stop maintaining manual AsyncAPI files. Document your events directly in your PHP code.
-- **Attribute-Based:** Uses modern PHP 8 attributes for a clean and declarative developer experience.
 - **Schema Integration:** Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
 - **Seamless Integration:** Works perfectly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
 - **AsyncAPI 3.0 Compliant:** Generates specifications that follow the latest AsyncAPI standard.
@@ -37,20 +36,18 @@ specifications with zero manual effort.
 
 ## How It Works
 
-Add the `#[AsyncApi]` attribute to your broadcast event classes:
+The package automatically discovers any event class in your application that implements `ShouldBroadcast`.
 
 ```php
-use Victormgomes\AsyncApi\Attributes\AsyncApi;
-
-#[AsyncApi]
 class ChatMessage implements ShouldBroadcast
 {
     // ...
 }
 ```
 
-The package automatically discovers your attributed events and registers a
-route that serves the AsyncAPI 3.0 JSON specification.
+By simply implementing `ShouldBroadcast`, your event is instantly documented. The package uses static code analysis to automatically infer the payload schema directly from your properties, DTOs, and method returns without requiring any manual reflection or hints!
+
+If you want to customize the generated schema (like overriding the channel name or adding descriptions), you can optionally use the `#[AsyncApi]` attribute. If you want to hide an event, use `#[AsyncApiIgnore]`.
 
 ---
 
@@ -72,12 +69,9 @@ php artisan vendor:publish --tag="async-api-config"
 
 ## Quick Start
 
-### Step 1: Annotate Your Event
+### Step 1: Create a Broadcast Event
 
 ```php
-use Victormgomes\AsyncApi\Attributes\AsyncApi;
-
-#[AsyncApi]
 class ChatMessage implements ShouldBroadcast
 {
     public function __construct(
@@ -95,8 +89,8 @@ class ChatMessage implements ShouldBroadcast
 
 ### Step 2: Access the Documentation
 
-Visit `/docs/ws` in your application to view the interactive AsyncAPI
-documentation. The raw JSON specification is also available at `/docs/ws/json`.
+Visit `/docs/broadcast` in your application to view the interactive AsyncAPI
+documentation. The raw JSON specification is also available at `/docs/broadcast/json`.
 
 ---
 

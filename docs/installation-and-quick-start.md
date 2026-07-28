@@ -23,15 +23,14 @@ php artisan vendor:publish --tag="async-api-config"
 
 ## Quick Start
 
-### Step 1: Annotate Your Event
+### Step 1: Create a Broadcast Event
 
-Add the `#[AsyncApi]` attribute to any broadcast event class. The event must
-implement `ShouldBroadcast`.
+Any event in your Laravel application that implements `ShouldBroadcast` is automatically discovered by the package. The schema of your event is parsed using static code analysis without requiring any manual documentation!
 
 ```php
-use Victormgomes\AsyncApi\Attributes\AsyncApi;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\Channel;
 
-#[AsyncApi]
 class ChatMessage implements ShouldBroadcast
 {
     public function __construct(
@@ -49,10 +48,10 @@ class ChatMessage implements ShouldBroadcast
 
 ### Step 2: Access the Documentation
 
-Visit `/docs/ws` in your application to view the interactive AsyncAPI
+Visit `/docs/broadcast` in your application to view the interactive AsyncAPI
 documentation powered by the default
 [AsyncAPI Studio](https://www.asyncapi.com/) viewer. The raw JSON
-specification is also available at `/docs/ws/json`.
+specification is also available at `/docs/broadcast/json`.
 
 ---
 
