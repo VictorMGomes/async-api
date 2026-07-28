@@ -32,4 +32,4 @@ By simply implementing `ShouldBroadcast`, your event is instantly documented. Th
 
 If you want to customize the generated schema (like overriding the channel name or adding descriptions), you can optionally use the `#[AsyncApi]` attribute. If you want to hide an event, use `#[AsyncApiIgnore]`.
 
-The package exposes a route that serves the AsyncAPI 3.0 JSON specification. Visit `/docs/ws` in your application to view the interactive documentation UI.
+The package exposes a route that serves the AsyncAPI 3.0 JSON specification. Visit `/docs/broadcast` in your application to view the interactive documentation UI.

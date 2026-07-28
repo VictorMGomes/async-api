@@ -31,4 +31,4 @@ composer require victormgomes/async-api
 ```
 
 **2. Access the documentation**  
-Visit `/docs/ws` in your browser. All your `ShouldBroadcast` events are already documented!
+Visit `http://localhost/docs/broadcast` in your browser. All your `ShouldBroadcast` events are already documented!

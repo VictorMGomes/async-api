@@ -89,8 +89,8 @@ class ChatMessage implements ShouldBroadcast
 
 ### Step 2: Access the Documentation
 
-Visit `/docs/ws` in your application to view the interactive AsyncAPI
-documentation. The raw JSON specification is also available at `/docs/ws/json`.
+Visit `/docs/broadcast` in your application to view the interactive AsyncAPI
+documentation. The raw JSON specification is also available at `/docs/broadcast/json`.
 
 ---
 
