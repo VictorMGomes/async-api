@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>{{ config('app.name') }} - WebSocket Docs</title>
+    <title>{{ config('app.name') }} - AsyncAPI Docs</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="https://unpkg.com/@asyncapi/react-component@3.0.2/styles/default.min.css">

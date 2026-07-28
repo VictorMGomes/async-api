@@ -1,6 +1,6 @@
 # Introduction
 
-In modern event-driven architectures, documenting WebSocket interfaces is as
+In modern event-driven architectures, documenting broadcast events is as
 crucial as documenting REST APIs. `laravel-async-api` bridges this gap for
 Laravel applications by automating the generation of AsyncAPI specifications.
 

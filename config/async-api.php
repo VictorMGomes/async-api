@@ -25,7 +25,7 @@ return [
     'info' => [
         'title' => env('APP_NAME', 'Laravel'),
         'version' => env('APP_VERSION', '1.0.0'),
-        'description' => 'AsyncAPI documentation for the WebSocket API',
+        'description' => 'AsyncAPI documentation for the broadcasting API',
     ],
 
     /*
@@ -77,7 +77,7 @@ return [
                 'type' => 'http',
                 'scheme' => 'bearer',
                 'bearerFormat' => 'JWT',
-                'description' => 'Enter your Sanctum token to authenticate with the WebSocket server.',
+                'description' => 'Enter your Sanctum token to authenticate with the broadcasting server.',
             ],
         ],
     ],

@@ -26,7 +26,7 @@ class AsyncApiGenerator
 
         $info = config('asyncapi.info', []);
 
-        $info['title'] = $info['title'] ?? config('app.name').' WebSocket API';
+        $info['title'] = $info['title'] ?? config('app.name').' Broadcasting API';
         $info['version'] = $info['version'] ?? '1.0.0';
 
         $structure = [
