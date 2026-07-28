@@ -23,12 +23,14 @@ features:
       details: Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
 ---
 
-## 🚀 Quick Start
+# 🚀 Quick Start
 
-**1. Install the package**
+### 1. Install the package
+
 ```bash
 composer require victormgomes/async-api
 ```
 
-**2. Access the documentation**  
+### 2. Access the documentation
+
 Visit `http://localhost/docs/broadcast` in your browser. All your `ShouldBroadcast` events are already documented!
