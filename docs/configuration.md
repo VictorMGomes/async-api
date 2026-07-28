@@ -21,37 +21,23 @@ return [
     /*
     | Info (API Metadata)
     */
-    'info' => [
-        'title' => env('APP_NAME', 'Laravel'),
-        'version' => env('APP_VERSION', '1.0.0'),
-        'description' => 'AsyncAPI documentation for the WebSocket API',
-    ],
+    'info_title' => env('APP_NAME', 'Laravel Broadcasting API'),
+    'info_version' => env('APP_VERSION', '1.0.0'),
+    'info_description' => 'AsyncAPI documentation for the broadcasting API',
 
     /*
-    | Servers (Environments)
+    | Server Configuration (Reverb / Pusher)
     */
-    'servers' => [
-        'default' => [
-            'host' => env('REVERB_HOST', 'localhost') . ':' . env('REVERB_PORT', 8080),
-            'protocol' => env('REVERB_SCHEME', 'https') === 'https' ? 'wss' : 'ws',
-            'protocolVersion' => '1.3',
-            'description' => 'Laravel Reverb Server (Pusher Protocol)',
-            // ...
-        ],
-    ],
+    'server_host' => env('REVERB_HOST', 'localhost'),
+    'server_port' => env('REVERB_PORT', 8080),
+    'server_scheme' => env('REVERB_SCHEME', 'https'),
+    'server_app_key' => env('REVERB_APP_KEY', 'your-app-key-here'),
+    'server_description' => 'Laravel Reverb Server (Pusher Protocol)',
 
     /*
-    | Components (Security and Reusable Schemas)
+    | Security
     */
-    'components' => [
-        'securitySchemes' => [
-            'bearerAuth' => [
-                'type' => 'http',
-                'scheme' => 'bearer',
-                'bearerFormat' => 'JWT',
-            ],
-        ],
-    ],
+    'security_description' => 'Enter your Sanctum token to authenticate with the broadcasting server.',
 
     /*
     | Route Middleware
@@ -66,10 +52,14 @@ return [
 | ---------------------------- | ------------------------------------------------------------ |
 | `asyncapi_version`           | The AsyncAPI specification version (default: `3.0.0`).       |
 | `default_content_type`       | Default content type for all messages.                       |
-| `info`                       | API metadata: title, version, description, contact, license. |
-| `servers`                    | Server configurations (host, protocol, security).            |
-| `components.securitySchemes` | Reusable security scheme definitions.                        |
-| `components.schemas`         | Additional reusable schemas (auto-generated from DTOs).      |
+| `info_title`                 | The title of your API.                                       |
+| `info_version`               | The version of your API.                                     |
+| `info_description`           | A short description of your API.                             |
+| `server_host`                | The broadcasting server host (e.g. `localhost`).             |
+| `server_port`                | The broadcasting server port (e.g. `8080`).                  |
+| `server_scheme`              | The HTTP scheme used to connect (e.g. `https` or `http`).    |
+| `server_app_key`             | The Reverb/Pusher app key.                                   |
+| `security_description`       | The description of the Bearer authentication method.         |
 | `middleware`                 | Middleware to assign to the AsyncAPI routes.                 |
 
 ## Debug Mode

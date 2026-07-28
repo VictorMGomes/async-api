@@ -51,7 +51,6 @@ The file is written to `public/docs/asyncapi.json`.
 | Parameter     | Type      | Default  | Description                                                    |
 | ------------- | --------- | -------- | -------------------------------------------------------------- |
 | `channel`     | `?string` | `null`   | Broadcast channel URI (supports `{param}` placeholders).       |
-| `dto`         | `?string` | `null`   | DTO/Model class for payload schema extraction.                 |
 | `description` | `string`  | `''`     | Human-readable operation description.                          |
 | `name`        | `?string` | `null`   | Custom event name (defaults to class name or `broadcastAs()`). |
 | `summary`     | `?string` | `null`   | Short summary (AsyncAPI 3.0).                                  |
@@ -59,15 +58,6 @@ The file is written to `public/docs/asyncapi.json`.
 | `action`      | `string`  | `'send'` | `'send'` or `'receive'`.                                       |
 | `tags`        | `array`   | `[]`     | Tags for grouping operations.                                  |
 | `security`    | `?array`  | `null`   | Per-operation security overrides.                              |
-
-## DTO Schema Extraction
-
-The package reflects on all public properties of the DTO class to generate a JSON Schema. Supported DTO patterns:
-
-- Plain PHP classes with typed public properties
-- `Spatie\LaravelData\Data` subclasses
-
-If no `dto` is specified, the package auto-discovers the payload by inspecting constructor parameters and naming conventions (`*DTO`, `*EventDTO`).
 
 ## Configuration
 
@@ -80,9 +70,9 @@ php artisan vendor:publish --tag="async-api-config"
 Key configuration options in `config/async-api.php`:
 
 - `asyncapi_version` — Specification version (default: `3.0.0`)
-- `info` — API metadata (title, version, description)
-- `servers` — Server configurations (host, protocol, security)
-- `components.securitySchemes` — Reusable security definitions
+- `info_*` — API metadata (`title`, `version`, `description`)
+- `server_*` — Server configurations (`host`, `port`, `scheme`, `app_key`)
+- `security_description` — Bearer Auth description
 - `debug` — Enable detailed logging during generation
 
 ## Advanced Usage & Documentation
