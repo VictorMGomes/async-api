@@ -8,11 +8,16 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Support\Facades\Log;
 use ReflectionClass;
 use ReflectionNamedType;
+use ReflectionProperty;
 use Spatie\LaravelData\Data;
 use stdClass;
-use Symfony\Component\Finder\Finder;
 use Throwable;
 use Victormgomes\AsyncApi\Attributes\AsyncApi;
+use Laravel\Ranger\Ranger;
+use Laravel\Surveyor\Analyzer\Analyzer;
+use Laravel\Surveyor\Types\ArrayType;
+use Laravel\Surveyor\Types\ClassType;
+use Laravel\Surveyor\Types\StringType;
 
 class AsyncApiGenerator
 {
@@ -42,13 +47,28 @@ class AsyncApiGenerator
             ],
         ];
 
-        $classes = $this->scanClasses();
+        $paths = array_filter([app_path(), base_path('Modules'), base_path('modules')], 'is_dir');
+        
+        $this->log('🔍 Varrendo a aplicação com Ranger nos diretórios: '.implode(', ', $paths));
 
-        $this->log('✅ SCAN FINALIZADO. Classes válidas encontradas: '.count($classes));
+        $ranger = app(Ranger::class);
+        $ranger->setAppPaths(...$paths);
 
-        foreach ($classes as $class) {
-            $this->processClass($class, $structure);
-        }
+        $analyzer = app(Analyzer::class);
+        
+        $validClassesCount = 0;
+
+        $ranger->onBroadcastEvents(function (\Laravel\Ranger\Components\BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount) {
+            $this->log("💎 EVENTO BROADCAST ENCONTRADO (Ranger): {$event->className}");
+            $processed = $this->processEvent($event, $analyzer, $structure);
+            if ($processed) {
+                $validClassesCount++;
+            }
+        });
+
+        $ranger->walk();
+
+        $this->log('✅ SCAN FINALIZADO. Classes válidas processadas: '.$validClassesCount);
 
         // Adiciona schemas reutilizáveis coletados durante o processamento
         $structure['components']['schemas'] = $this->schemaConverter->getSchemas();
@@ -75,14 +95,16 @@ class AsyncApiGenerator
         return $structure;
     }
 
-    private function processClass(string $className, array &$structure): void
+    private function processEvent(\Laravel\Ranger\Components\BroadcastEvent $event, Analyzer $analyzer, array &$structure): bool
     {
+        $className = $event->className;
+
         try {
             $reflection = new ReflectionClass($className);
             $attributes = $reflection->getAttributes(AsyncApi::class);
 
             if (empty($attributes)) {
-                return;
+                return false;
             }
 
             $attr = $attributes[0]->newInstance();
@@ -149,14 +171,23 @@ class AsyncApiGenerator
 
             $channelUri = $attr->channel;
             if (! $channelUri) {
-                $channelUri = $this->inferChannelFromCode($reflection);
+                $channelUri = $this->inferChannelFromSurveyor($className, $analyzer);
             }
 
             if (! $channelUri) {
                 $this->log('   ❌ ERRO: Não foi possível ler o canal automaticamente.');
 
-                return;
+                return false;
             }
+
+            // Normaliza as variáveis PHP injetadas no channel URI para o formato AsyncAPI {param}
+            $channelUri = preg_replace_callback('/\{\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)\}/', function ($m) {
+                return '{'.$m[1].'}';
+            }, $channelUri);
+
+            $channelUri = preg_replace_callback('/\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)/', function ($m) {
+                return '{'.$m[1].'}';
+            }, $channelUri);
 
             $eventName = $attr->name ?? $this->safelyGetBroadcastAs($reflection);
 
@@ -220,90 +251,58 @@ class AsyncApiGenerator
             ]);
 
             $this->log("   ✨ Sucesso! Adicionado ao canal: $channelUri");
+            
+            return true;
 
         } catch (Throwable $e) {
             $this->log("   💀 EXCEPTION em $className: ".$e->getMessage());
+            return false;
         }
     }
 
-    private function inferChannelFromCode(ReflectionClass $reflection): ?string
+    private function inferChannelFromSurveyor(string $className, Analyzer $analyzer): ?string
     {
-        $fileName = $reflection->getFileName();
-        if (! $fileName) {
+        try {
+            $analyzed = $analyzer->analyzeClass($className)->result();
+            if (! $analyzed->hasMethod('broadcastOn')) {
+                return null;
+            }
+            
+            $returnType = $analyzed->getMethod('broadcastOn')->returnType();
+            
+            return $this->extractChannelUriFromType($returnType);
+        } catch (Throwable $e) {
+            $this->log("   💀 ERRO AO INFERIR CANAL via Surveyor: ".$e->getMessage());
             return null;
         }
-
-        $content = file_get_contents($fileName);
-        $pattern = '/new\s+(?:Private|Presence|Channel)?Channel\s*\(\s*["\']([^"\']+)["\']\s*\)/';
-
-        if (preg_match($pattern, $content, $matches)) {
-            $rawChannel = $matches[1];
-
-            $cleanChannel = preg_replace_callback('/\{\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)\}/', function ($m) {
-                return '{'.$m[1].'}';
-            }, $rawChannel);
-
-            $cleanChannel = preg_replace_callback('/\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)/', function ($m) {
-                return '{'.$m[1].'}';
-            }, $cleanChannel);
-
-            return $cleanChannel;
-        }
-
-        return null;
     }
 
-    private function scanClasses(): array
+    private function extractChannelUriFromType(mixed $type): ?string
     {
-        $validClasses = [];
-        $paths = array_filter([app_path(), base_path('Modules'), base_path('modules')], 'is_dir');
-
-        if (empty($paths)) {
-            return [];
-        }
-
-        $this->log('🔍 Varrendo diretórios: '.implode(', ', $paths));
-
-        $finder = new Finder;
-        $finder->files()->in($paths)->name('*.php');
-
-        foreach ($finder as $file) {
-            $content = file_get_contents($file->getRealPath());
-
-            if (! preg_match('/namespace\s+([a-zA-Z0-9_\\\\]+);/s', $content, $mNamespace)) {
-                continue;
-            }
-            if (! preg_match('/class\s+([a-zA-Z0-9_]+)/s', $content, $mClass)) {
-                continue;
-            }
-
-            $fullClass = $mNamespace[1].'\\'.$mClass[1];
-
-            try {
-                if (! class_exists($fullClass)) {
-                    continue;
-                }
-
-                $reflection = new ReflectionClass($fullClass);
-
-                if (! $reflection->implementsInterface(ShouldBroadcast::class)) {
-                    continue;
-                }
-
-                $attrs = $reflection->getAttributes(AsyncApi::class);
-                if (empty($attrs)) {
-                    continue;
-                }
-
-                $this->log("💎 CLASSE VÁLIDA ENCONTRADA: $fullClass");
-                $validClasses[] = $fullClass;
-
-            } catch (Throwable $e) {
-                continue;
+        if ($type instanceof ClassType) {
+            $prop = new ReflectionProperty(ClassType::class, 'constructorArguments');
+            $prop->setAccessible(true);
+            $args = $prop->getValue($type);
+            
+            if (is_array($args) && count($args) > 0 && $args[0] instanceof StringType) {
+                return $args[0]->value;
             }
         }
-
-        return array_unique($validClasses);
+        
+        if ($type instanceof ArrayType) {
+            if (! empty($type->value)) {
+                // Para manter a compatibilidade original que esperava uma string de URI, 
+                // retornamos a primeira URI válida encontrada no array.
+                foreach ($type->value as $item) {
+                    $channel = $this->extractChannelUriFromType($item);
+                    if ($channel) {
+                        return $channel;
+                    }
+                }
+            }
+        }
+        
+        return null;
     }
 
     private function safelyGetBroadcastAs(ReflectionClass $reflection): string
