@@ -145,5 +145,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stability": true
+    "prefer-stable": true
 }

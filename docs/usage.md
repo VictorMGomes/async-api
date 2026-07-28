@@ -63,6 +63,7 @@ class ChatMessageDTO
 ```
 
 If no `dto` is specified, the package attempts to auto-discover the payload by:
+
 1. Looking for a constructor parameter named `$data`
 2. Checking for `Spatie\LaravelData\Data` subclasses
 3. Guessing DTO class names based on naming conventions (`{Event}DTO`, `{Event}EventDTO`)
