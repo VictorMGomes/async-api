@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Victormgomes\AsyncApi\Services\Docs;
 
+use BackedEnum;
 use ReflectionClass;
 use ReflectionEnum;
 use ReflectionNamedType;
@@ -75,11 +76,12 @@ class SchemaConverter
             $enumReflection = new ReflectionEnum($typeName);
 
             if ($enumReflection->isBacked()) {
-                $backingType = $enumReflection->getBackingType()->getName();
+                $backingType = $enumReflection->getBackingType();
+                $backingTypeName = $backingType?->getName() ?? 'string';
 
                 $schema = [
-                    'type' => $backingType === 'int' ? 'integer' : 'string',
-                    'enum' => array_map(fn ($case) => $case->value, $typeName::cases()),
+                    'type' => $backingTypeName === 'int' ? 'integer' : 'string',
+                    'enum' => array_map(fn (BackedEnum $case) => $case->value, $typeName::cases()),
                 ];
             } else {
                 $schema = [
