@@ -22,3 +22,13 @@ features:
     - title: 🔗 Schema Integration
       details: Automatically extracts payload schemas from DTOs or models, ensuring your documentation always matches your code.
 ---
+
+## 🚀 Quick Start
+
+**1. Install the package**
+```bash
+composer require victormgomes/async-api
+```
+
+**2. Access the documentation**  
+Visit `/docs/ws` in your browser. All your `ShouldBroadcast` events are already documented!
