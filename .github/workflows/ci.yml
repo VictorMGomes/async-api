@@ -1,0 +1,72 @@
+name: CI/CD Pipeline
+
+on:
+    push:
+        branches:
+            - main
+        tags:
+            - "v*"
+    pull_request:
+        branches:
+            - main
+
+permissions:
+    contents: write
+    issues: write
+    pull-requests: write
+
+jobs:
+    enforce-governance:
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'chore/sync-master-files')
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                fetch-depth: 0
+            - name: Check for locked file modifications
+              run: |
+                # Lê os arquivos bloqueados dinamicamente do CODEOWNERS
+                LOCKED_FILES=$(awk '!/^#/ && !/^$/ {print $1}' .github/CODEOWNERS | sed 's|^/||')
+                CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD)
+                
+                for file in $CHANGED_FILES; do
+                  for locked in $LOCKED_FILES; do
+                    match=false
+                    case "$locked" in
+                      */)
+                        dir="${locked%/}"
+                        case "$file" in
+                          "$dir" | "$dir"/*) match=true ;;
+                        esac ;;
+                      *\*)
+                        # shellcheck disable=SC2254
+                        case "$file" in
+                          $locked) match=true ;;
+                        esac ;;
+                      *)
+                        [ "$file" = "$locked" ] && match=true ;;
+                    esac
+                    if $match; then
+                      echo "::error file=$file::❌ ERROR: This file ($file) can only be modified in the central repository: victormgomes/laravel-libs-shared"
+                      exit 1
+                    fi
+                  done
+                done
+    code-quality:
+        uses: victormgomes/laravel-libs-shared/.github/workflows/php-code-quality.yml@main
+
+    tests:
+        uses: victormgomes/laravel-libs-shared/.github/workflows/laravel-package-tests.yml@main
+
+    infra-lint:
+        uses: victormgomes/laravel-libs-shared/.github/workflows/infra-lint.yml@main
+
+    style-check:
+        uses: victormgomes/laravel-libs-shared/.github/workflows/php-style-checker.yml@main
+        secrets: inherit
+
+    release:
+        needs: [code-quality, tests, infra-lint, style-check]
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: victormgomes/laravel-libs-shared/.github/workflows/semantic-release.yml@main
+        secrets: inherit
