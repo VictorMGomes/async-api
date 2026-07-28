@@ -21,7 +21,7 @@ class UserRegistered implements ShouldBroadcast
         /** @var array<string, \App\DTOs\Permission> */
         public array $permissions
     ) {}
-    
+
     // ...
 }
 ```
