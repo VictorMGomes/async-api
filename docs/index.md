@@ -18,7 +18,7 @@ hero:
 
 features:
     - title: Zero-Effort Documentation
-      details: Stop maintaining manual AsyncAPI files. Document your events automatically using Laravel Surveyor AST analysis.
+      details: Stop maintaining manual AsyncAPI files. Document your events automatically using static code analysis.
     - title: 🧩 Attribute-Based
       details: Uses modern PHP 8 attributes for a clean and declarative developer experience. No verbose XML or YAML.
     - title: 🔗 Schema Integration

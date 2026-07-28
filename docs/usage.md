@@ -1,13 +1,13 @@
 # Usage
 
-By default, the package leverages **Laravel Surveyor** to automatically parse any class in your application that implements the `ShouldBroadcast` interface.
+By default, the package automatically parses any class in your application that implements the `ShouldBroadcast` interface.
 
 ## Automatic Discovery
 
 You don't need to add any attributes to your events. The package will automatically:
 1. Extract the channel name from the `broadcastOn()` method.
 2. Infer the operation name from the `broadcastAs()` method or the class name.
-3. Traverse the AST (Abstract Syntax Tree) to extract the complete payload schema by reading properties, types, arrays, generics, and PHPDocs of the variables you broadcast in `broadcastWith()`.
+3. Use static analysis to extract the complete payload schema by reading properties, types, arrays, generics, and PHPDocs of the variables you broadcast in `broadcastWith()`.
 
 ```php
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;

@@ -7,7 +7,7 @@ description: Automatically generate AsyncAPI 3.0 documentation from Laravel broa
 
 ## Overview
 
-Automatically generate [AsyncAPI 3.0](https://www.asyncapi.com/) specifications from your Laravel broadcast events. The package uses Laravel Surveyor (Abstract Syntax Tree analysis) to infer channels, operation names, and complex payloads (DTOs, arrays, PHPDoc properties) directly from your `ShouldBroadcast` event classes automatically.
+Automatically generate [AsyncAPI 3.0](https://www.asyncapi.com/) specifications from your Laravel broadcast events. The package uses static code analysis to infer channels, operation names, and complex payloads (DTOs, arrays, PHPDoc properties) directly from your `ShouldBroadcast` event classes automatically.
 
 Integrates seamlessly with Laravel's broadcasting system (Reverb, Pusher, Soketi).
 

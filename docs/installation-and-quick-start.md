@@ -25,7 +25,7 @@ php artisan vendor:publish --tag="async-api-config"
 
 ### Step 1: Create a Broadcast Event
 
-Any event in your Laravel application that implements `ShouldBroadcast` is automatically discovered by the package. The schema of your event is parsed using AST (Abstract Syntax Tree) without requiring any manual documentation!
+Any event in your Laravel application that implements `ShouldBroadcast` is automatically discovered by the package. The schema of your event is parsed using static code analysis without requiring any manual documentation!
 
 ```php
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
