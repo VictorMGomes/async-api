@@ -93,12 +93,10 @@ class ChatMessage implements ShouldBroadcast
 }
 ```
 
-### Step 2: Access the Specification
+### Step 2: Access the Documentation
 
-Visit `/docs/asyncapi.json` in your application to access the generated
-AsyncAPI 3.0 specification. Import it into
-[AsyncAPI Studio](https://studio.asyncapi.com/),
-[Redocly](https://redocly.com/), or any AsyncAPI-compatible tool.
+Visit `/docs/ws` in your application to view the interactive AsyncAPI
+documentation. The raw JSON specification is also available at `/docs/ws/json`.
 
 ---
 

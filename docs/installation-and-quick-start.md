@@ -5,48 +5,35 @@
 - PHP 8.3+
 - Laravel 12.x or 13.x
 
-## Install via Composer
+## Installation
+
+1. Install the package via Composer:
 
 ```bash
 composer require victormgomes/async-api
 ```
 
-## Publish the Configuration
+1. Publish the configuration file:
 
 ```bash
 php artisan vendor:publish --tag="async-api-config"
 ```
 
-This creates `config/async-api.php` where you can configure the AsyncAPI version, server details, security schemes, and more.
+---
 
-## Step 1: Annotate Your Events
+## Quick Start
 
-Add the `#[AsyncApi]` attribute to any broadcast event class. The event must implement `ShouldBroadcast`.
+### Step 1: Annotate Your Event
+
+Add the `#[AsyncApi]` attribute to any broadcast event class. The event must
+implement `ShouldBroadcast`.
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Events;
-
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
 use Victormgomes\AsyncApi\Attributes\AsyncApi;
 
-#[AsyncApi(
-    channel: 'chat.{room}',
-    dto: \App\DTOs\ChatMessageDTO::class,
-    description: 'A new chat message in a room',
-    action: 'send',
-)]
+#[AsyncApi]
 class ChatMessage implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
-
     public function __construct(
         public string $room,
         public string $message,
@@ -60,23 +47,12 @@ class ChatMessage implements ShouldBroadcast
 }
 ```
 
-## Step 2: Generate the Specification
+### Step 2: Access the Documentation
 
-Run the artisan command to scan your event classes and generate the AsyncAPI spec:
-
-```bash
-php artisan docs:asyncapi
-```
-
-The specification will be written to `public/docs/asyncapi.json`.
-
-## Step 3: Serve or Import
-
-You can serve the generated JSON directly, or import it into tools like:
-
-- [AsyncAPI Studio](https://studio.asyncapi.com/) for visual editing
-- [Redocly](https://redocly.com/) for interactive documentation
-- Any AsyncAPI-compatible code generator
+Visit `/docs/ws` in your application to view the interactive AsyncAPI
+documentation powered by the default
+[AsyncAPI Studio](https://www.asyncapi.com/) viewer. The raw JSON
+specification is also available at `/docs/ws/json`.
 
 ---
 
