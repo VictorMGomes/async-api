@@ -25,7 +25,7 @@ class AsyncApiGenerator
 
     public function generate(): array
     {
-        $this->log('🚀 INICIANDO GERAÇÃO (GLOBAL CONFIG MODE)...');
+        $this->log('🚀 STARTING GENERATION (GLOBAL CONFIG MODE)...');
 
         $info = [
             'title' => config('async-api.info_title', config('app.name').' Broadcasting API'),
@@ -85,7 +85,7 @@ class AsyncApiGenerator
 
         $paths = array_filter([app_path(), base_path('Modules'), base_path('modules')], 'is_dir');
 
-        $this->log('🔍 Varrendo a aplicação com Ranger nos diretórios: '.implode(', ', $paths));
+        $this->log('🔍 Scanning application with Ranger in directories: '.implode(', ', $paths));
 
         $ranger = app(Ranger::class);
         $ranger->setAppPaths(...$paths);
@@ -94,7 +94,7 @@ class AsyncApiGenerator
 
         $validClassesCount = 0;
 
-        $ranger->onBroadcastEvent(function (BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount) {
+        $ranger->onBroadcastEvent(function (BroadcastEvent $event) use (&$structure, $analyzer, &$validClassesCount): void {
             $this->log("💎 EVENTO BROADCAST ENCONTRADO (Ranger): {$event->className}");
             $processed = $this->processEvent($event, $analyzer, $structure);
             if ($processed) {
@@ -104,9 +104,8 @@ class AsyncApiGenerator
 
         $ranger->walk();
 
-        $this->log('✅ SCAN FINALIZADO. Classes válidas processadas: '.$validClassesCount);
+        $this->log('✅ SCAN FINISHED. Valid classes processed: '.$validClassesCount);
 
-        // Adiciona schemas reutilizáveis coletados durante o processamento
         $structure['components']['schemas'] = $this->schemaConverter->getSchemas();
 
         if (empty($structure['channels'])) {
@@ -138,9 +137,8 @@ class AsyncApiGenerator
         try {
             $reflection = new ReflectionClass($className);
 
-            // Permite ignorar o evento se tiver o atributo AsyncApiIgnore
             if (! empty($reflection->getAttributes(AsyncApiIgnore::class))) {
-                $this->log("   🚫 Ignorado por AsyncApiIgnore: $className");
+                $this->log("   🚫 Ignored by AsyncApiIgnore: $className");
 
                 return false;
             }
@@ -148,7 +146,7 @@ class AsyncApiGenerator
             $attributes = $reflection->getAttributes(AsyncApi::class);
             $attr = ! empty($attributes) ? $attributes[0]->newInstance() : new AsyncApi;
 
-            $this->log("📝 Processando Classe: $className");
+            $this->log("📝 Processing class: $className");
 
             $channelUri = $attr->channel;
             if (! $channelUri) {
@@ -156,30 +154,18 @@ class AsyncApiGenerator
             }
 
             if (! $channelUri) {
-                $this->log('   ❌ ERRO: Não foi possível ler o canal automaticamente.');
+                $this->log('   ❌ ERROR: Could not read the channel automatically.');
 
                 return false;
             }
 
-            // Normaliza as variáveis PHP injetadas no channel URI para o formato AsyncAPI {param}
-            $channelUri = preg_replace_callback('/\{\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)\}/', function ($m) {
-                return '{'.$m[1].'}';
-            }, $channelUri);
+            $channelUri = $this->normalizePhpVarsToAsyncApiParams($channelUri);
 
-            $channelUri = preg_replace_callback('/\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)/', function ($m) {
-                return '{'.$m[1].'}';
-            }, $channelUri);
-
-            // Usa o nome da mensagem extraído nativamente pelo Surveyor/Ranger via $event->name
             $eventName = $attr->name ?? $event->name;
 
-            // Delega a geração do schema inteiramente ao Surveyor Type
             $payloadSchema = $this->schemaConverter->convertSurveyorType($event->data);
 
-            // Envolve o schema caso o Surveyor retorne apenas propriedades isoladas de objeto e não o object root
-            if (isset($payloadSchema['properties']) && ! isset($payloadSchema['type'])) {
-                $payloadSchema['type'] = 'object';
-            }
+            $payloadSchema = $this->ensureSchemaHasObjectType($payloadSchema);
 
             $channelKey = str_replace(['{', '}', '.', '/'], '_', $channelUri);
             if (! isset($structure['channels'][$channelKey])) {
@@ -192,7 +178,7 @@ class AsyncApiGenerator
                     $parameters = [];
                     foreach ($matches[1] as $paramName) {
                         $parameters[$paramName] = [
-                            'description' => "Parâmetro dinâmico: $paramName",
+                            'description' => "Dynamic parameter: $paramName",
                         ];
                     }
                     $structure['channels'][$channelKey]['parameters'] = $parameters;
@@ -227,9 +213,9 @@ class AsyncApiGenerator
                 }
             }
 
-            $operationId = $attr->operationId ?? $attr->action.$eventName;
+            $operationId = $attr->operationId ?? $attr->action->value.$eventName;
             $structure['operations'][$operationId] = array_filter([
-                'action' => $attr->action,
+                'action' => $attr->action->value,
                 'channel' => ['$ref' => "#/channels/$channelKey"],
                 'summary' => $attr->summary ?? "Operation for $eventName",
                 'security' => $security,
@@ -238,12 +224,12 @@ class AsyncApiGenerator
                 ],
             ]);
 
-            $this->log("   ✨ Sucesso! Adicionado ao canal: $channelUri com schema dinâmico.");
+            $this->log("   ✨ Success! Added to channel: $channelUri with dynamic schema.");
 
             return true;
 
         } catch (Throwable $e) {
-            $this->log("   💀 EXCEPTION em $className: ".$e->getMessage());
+            $this->log("   💀 EXCEPTION in $className: ".$e->getMessage());
 
             return false;
         }
@@ -261,7 +247,7 @@ class AsyncApiGenerator
 
             return $this->extractChannelUriFromType($returnType);
         } catch (Throwable $e) {
-            $this->log('   💀 ERRO AO INFERIR CANAL via Surveyor: '.$e->getMessage());
+            $this->log('   💀 ERROR INFERRING CHANNEL via Surveyor: '.$e->getMessage());
 
             return null;
         }
@@ -278,16 +264,39 @@ class AsyncApiGenerator
             }
         }
 
-        if ($type instanceof ArrayType) {
-            if (! empty($type->value)) {
-                // Para manter a compatibilidade original que esperava uma string de URI,
-                // retornamos a primeira URI válida encontrada no array.
-                foreach ($type->value as $item) {
-                    $channel = $this->extractChannelUriFromType($item);
-                    if ($channel) {
-                        return $channel;
-                    }
-                }
+        if ($type instanceof ArrayType && ! empty($type->value)) {
+            return $this->findFirstValidChannelUri($type->value);
+        }
+
+        return null;
+    }
+
+    private function normalizePhpVarsToAsyncApiParams(string $channelUri): string
+    {
+        $channelUri = preg_replace_callback('/\{\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)\}/', function ($m) {
+            return '{'.$m[1].'}';
+        }, $channelUri);
+
+        return preg_replace_callback('/\$(?:this->)?(?:[a-zA-Z0-9_]+->)*([a-zA-Z0-9_]+)/', function ($m) {
+            return '{'.$m[1].'}';
+        }, $channelUri);
+    }
+
+    private function ensureSchemaHasObjectType(array $payloadSchema): array
+    {
+        if (isset($payloadSchema['properties']) && ! isset($payloadSchema['type'])) {
+            $payloadSchema['type'] = 'object';
+        }
+
+        return $payloadSchema;
+    }
+
+    private function findFirstValidChannelUri(array $value): ?string
+    {
+        foreach ($value as $item) {
+            $channel = $this->extractChannelUriFromType($item);
+            if ($channel) {
+                return $channel;
             }
         }
 

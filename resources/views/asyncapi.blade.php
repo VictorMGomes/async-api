@@ -39,8 +39,8 @@
                 }, document.getElementById('asyncapi'));
             })
             .catch(err => {
-                console.error("Erro ao carregar o schema:", err);
-                document.getElementById('asyncapi').innerHTML = '<p style="color:red; padding:20px;">Erro ao carregar a documentação JSON.</p>';
+                console.error("Error loading schema:", err);
+                document.getElementById('asyncapi').innerHTML = '<p style="color:red; padding:20px;">Error loading the JSON documentation.</p>';
             });
     </script>
 </body>

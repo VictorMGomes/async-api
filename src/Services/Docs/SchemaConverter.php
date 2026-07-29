@@ -23,9 +23,6 @@ class SchemaConverter
 {
     private array $schemas = [];
 
-    /**
-     * Converte um tipo nativo do Surveyor em um JSON Schema válido.
-     */
     public function convertSurveyorType(SurveyorType $type): array
     {
         if ($type instanceof ClassType) {
@@ -50,7 +47,7 @@ class SchemaConverter
                 ];
             }
 
-            return $this->convert($type->value, true);
+            return $this->convertDtoClassToJsonSchema($type->value, true);
         }
 
         if ($type instanceof ArrayType) {
@@ -89,14 +86,12 @@ class SchemaConverter
             $oneOf = [];
             foreach ($type->types as $subType) {
                 if ($subType instanceof NullType) {
-                    continue; // Lidamos com null separadamente
+                    continue;
                 }
                 $oneOf[] = $this->convertSurveyorType($subType);
             }
             if (count($oneOf) === 1) {
-                $schema = $oneOf[0];
-
-                return $schema; // Em OpenAPI 3.0 não tem nullable fácil, vamos simplificar o schema
+                return $this->simplifyNullableToOneOfSchema($oneOf);
             }
             if (count($oneOf) > 1) {
                 return ['oneOf' => $oneOf];
@@ -119,10 +114,7 @@ class SchemaConverter
         return ['type' => 'string'];
     }
 
-    /**
-     * Converte uma classe DTO em um array de propriedades JSON Schema.
-     */
-    public function convert(string $className, bool $asRef = false): array
+    public function convertDtoClassToJsonSchema(string $className, bool $asRef = false): array
     {
         if (! class_exists($className)) {
             return [];
@@ -131,11 +123,7 @@ class SchemaConverter
         $shortName = (new ReflectionClass($className))->getShortName();
 
         if ($asRef) {
-            if (! isset($this->schemas[$shortName])) {
-                // Importante: extrair propriedades ANTES de registrar para evitar recursão infinita parcial
-                $this->schemas[$shortName] = ['type' => 'object']; // Placeholder
-                $this->schemas[$shortName] = $this->extractProperties($className);
-            }
+            $this->registerSchemaWithCycleGuard($className, $shortName);
 
             return ['$ref' => "#/components/schemas/$shortName"];
         }
@@ -143,9 +131,21 @@ class SchemaConverter
         return $this->extractProperties($className);
     }
 
+    private function registerSchemaWithCycleGuard(string $className, string $shortName): void
+    {
+        if (! isset($this->schemas[$shortName])) {
+            $this->schemas[$shortName] = ['type' => 'object'];
+            $this->schemas[$shortName] = $this->extractProperties($className);
+        }
+    }
+
+    private function simplifyNullableToOneOfSchema(array $oneOf): array
+    {
+        return $oneOf[0];
+    }
+
     private function extractProperties(string $className): array
     {
-        // Agora usamos o Analyzer do Surveyor para extrair as propriedades em vez do Reflection nativo
         $analyzer = app(Analyzer::class);
         $analyzed = $analyzer->analyzeClass($className)->result();
 

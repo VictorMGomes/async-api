@@ -6,21 +6,16 @@ namespace Victormgomes\AsyncApi\Commands;
 
 use Illuminate\Console\Command;
 use Victormgomes\AsyncApi\Services\Docs\AsyncApiGenerator;
-use Victormgomes\AsyncApi\Services\Docs\SchemaConverter;
 
 class AsyncApiCommand extends Command
 {
     protected $signature = 'docs:asyncapi';
 
-    protected $description = 'Gera a documentação AsyncAPI automaticamente.';
+    protected $description = 'Generate AsyncAPI documentation automatically.';
 
-    public function handle(): int
+    public function handle(AsyncApiGenerator $generator): int
     {
-        $this->info('🚀 Iniciando escaneamento de eventos...');
-
-        // Injeção de dependência manual (ou via container)
-        $converter = new SchemaConverter;
-        $generator = new AsyncApiGenerator($converter);
+        $this->info('🚀 Starting event scan...');
 
         $docs = $generator->generate();
 
@@ -31,7 +26,7 @@ class AsyncApiCommand extends Command
 
         file_put_contents($path, json_encode($docs, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-        $this->info('✅ Arquivo gerado com sucesso!');
+        $this->info('✅ File generated successfully!');
         $this->info('📂 '.$path);
 
         return self::SUCCESS;
